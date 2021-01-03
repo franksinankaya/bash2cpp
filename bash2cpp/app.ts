@@ -1639,6 +1639,7 @@ try {
 }
 catch (e) {
     console.log(e);
+    console.log("exception captured");
     process.exit(-1);
 }
 

@@ -27,7 +27,7 @@ REM read-only-rootfs-hook.sh
 REM won't compile
 REM urandom
 
-mkdir gen
+IF NOT EXIST gen GOTO mkdir gen
 
 for %%x in (
 		mountnfs.sh
@@ -56,7 +56,14 @@ for %%x in (
         sysfs.sh
         umountfs
 ) do (
+	if exist gen\%%~nx.cpp (
+		del gen\%%~nx.cpp
+	)
 	node app.js tests/%%x gen/%%~nx.cpp
+	if not exist gen\%%~nx.cpp (
+		echo Error
+		goto :eof
+	)
 	astyle -q -n gen/%%~nx.cpp
 	echo "compiling gen/%%~nx.cpp"
 	wsl g++ gen/%%~nx.cpp -o gen/%%~nx -lpcre -std=c++17
