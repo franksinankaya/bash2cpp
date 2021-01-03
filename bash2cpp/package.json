@@ -1,0 +1,20 @@
+{
+  "name": "bashconverter",
+  "version": "0.0.0",
+  "description": "bashconverter",
+  "main": "app.js",
+  "author": {
+    "name": ""
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean"
+  },
+  "devDependencies": {
+    "@types/node": "^8.10.66",
+    "typescript": "^3.9.7"
+  },
+  "dependencies": {
+    "bash-parser": "^0.5.0"
+  }
+}
