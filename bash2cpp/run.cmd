@@ -4,12 +4,6 @@ REM terminates in app.ts
 REM banner.sh
 
 REM terminates in app.ts
-REM dmesg.sh
-
-REM terminates in app.ts
-REM functions
-
-REM terminates in app.ts
 REM hostname.sh
 
 REM won't compile
@@ -24,6 +18,9 @@ REM read-only-rootfs-hook.sh
 IF NOT EXIST gen GOTO mkdir gen
 
 for %%x in (
+        if.sh
+		functions
+		dmesg.sh
 		checkroot.sh
 		urandom
 		mountnfs.sh
@@ -33,10 +30,9 @@ for %%x in (
         read.sh
         variables.sh
         redirection.sh
-        functions.sh
+        functions0.sh
         case.sh
         if7.sh
-        if.sh
         for.sh
         alignment.sh
         bootmisc.sh

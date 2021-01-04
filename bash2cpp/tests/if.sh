@@ -1,8 +1,8 @@
-# if LOGPATH=$(which logrotate); then
-	# $LOGPATH -f /etc/logrotate-dmesg.conf
-# else
-	# mv -f /var/log/dmesg /var/log/dmesg.old
-# fi
+if LOGPATH=$(which logrotate); then
+	$LOGPATH -f /etc/logrotate-dmesg.conf
+else
+	mv -f /var/log/dmesg /var/log/dmesg.old
+fi
 
 
 # if [ -z "$HOSTNAME" -o "$HOSTNAME" = "(none)" -o ! -z "`echo $HOSTNAME | sed -n '/^[0-9]*\.[0-9].*/p'`" ] ; then
@@ -50,15 +50,15 @@ fi
 # fi
 
 
-# if cmp a b &> /dev/null # Suppress output.
-# then echo "Files a and b are identical."
-# else echo "Files a and b differ."
-# fi
+if cmp a b &> /dev/null # Suppress output.
+then echo "Files a and b are identical."
+else echo "Files a and b differ."
+fi
 ##The very useful "if-grep" construct:
 ##-----------------------------------
-# if grep -q Bash file
- # then echo "File contains at least one occurrence of Bash."
-# fi
+if grep -q Bash file
+ then echo "File contains at least one occurrence of Bash."
+fi
 # word=Linux
 # letter_sequence=inu
 # if echo "$word" | grep -q "$letter_sequence"

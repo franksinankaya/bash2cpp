@@ -1,6 +1,7 @@
 #!/bin/bash
 
 declare -a arr=(
+				"redirect.sh"
 				# "while0.sh"
 				"for0.sh"
 				"if3.sh"

@@ -4,7 +4,12 @@ const file = readFileSync(process.argv[2], 'utf-8');
 const babylon = require('babylon');
 
 class ConvertBash {
-    private functiondefs:any = ""
+    private functiondefs: any = ""
+    private functionnames: any = []
+
+    private escapeDoubleQuotes(str:any) {
+        return str.replace(/\\([\s\S])|(")/g, "\\$1$2"); // thanks @slevithan!
+    }
 
     private terminate(command: any) {
         console.log('unknown command: ' + JSON.stringify(command));
@@ -559,15 +564,16 @@ class ConvertBash {
 
     private convertClause(clausecommands: any, intest = false): [string, boolean] {
         let clause = ""
-        if (intest || (clausecommands.name.text == "test") || (clausecommands.name.text == "[") || (clausecommands.name.text == "[[") ||
-            (clausecommands.name.text == "!") && ((clausecommands.suffix[0].text == "test") || (clausecommands.suffix[0].text == "[") || (clausecommands.suffix[0].text == "[["))) {
+        let name = clausecommands.name ? clausecommands.name.text : ""
+        if (intest || (name == "test") || (name == "[") || (name == "[[") ||
+            (name == "!") && ((clausecommands.suffix[0].text == "test") || (clausecommands.suffix[0].text == "[") || (clausecommands.suffix[0].text == "[["))) {
             clause = this.convertOneCondition(clausecommands)
 
             if (clausecommands.suffix[clausecommands.suffix.length - 1].text != "]")
                 intest = true
         }
         else {
-            if (clausecommands.name.text != "!")
+            if (name != "!")
                 clause = " checkval(" + this.convertExecCommand(clausecommands, false) + ")"
             else {
                 const clauseexpansion = this.convertExecCommand(clausecommands, false, false)
@@ -608,29 +614,52 @@ class ConvertBash {
     }
 
     private convertIf(command: any): string {
-        let text = ""
-        if (command.clause.commands.length != 1)
-            this.terminate(command)
+        let redirectindex = -1
+        let redirections = null
 
-        const [clause, thenval, elseval] = this.convertIfStatement(command, command.clause.commands[0], command.then)
-        
-        text += "if (" + clause + ") { \n" + thenval + "\n}\n" + (elseval ? "else\n{\n" + elseval + "}" : "");
-        if (command.else && command.else.type == "If") {
-            text += "else " + this.convertIf(command.else)
+        if (command.clause.commands.length != 1) {
+            if (command.clause.commands[1].prefix && command.clause.commands[1].prefix[0].type == "Redirect") {
+                redirectindex = 0
+                redirections = command.clause.commands[1].prefix
+            }
+            else
+                this.terminate(command)
         }
 
-        return text;
+        let maintext = ""
+        const [clause, thenval, elseval] = this.convertIfStatement(command, command.clause.commands[0], command.then)
+        
+        maintext += "if (" + clause + ") { \n" + thenval + "\n}\n" + (elseval ? "else\n{\n" + elseval + "}" : "");
+        if (command.else && command.else.type == "If") {
+            maintext += "else " + this.convertIf(command.else)
+        }
+
+        return this.convertStdRedirects(redirections, redirectindex, maintext)
     }
 
     private convertFunction(command: any): string {
         let text = ""
+        text += "std::string " + this.convertCommand(command.name) + "(std::initializer_list<std::string> list) {\n"
+        text += "int i = 0;\n"
+        text += "set_env(\"#\", (int)list.size());\n"
+        text += "for (auto elem : list )\n"
+        text += "{\n"
+        text += "set_env(std::to_string(i + 1).c_str(), elem.c_str());\n"
+        text += "i++;\n"
+        text += "}\n"
+        text += "std::streambuf * backup;\n"
+        text += "backup = std::cout.rdbuf();\n"
+        text += "scopeexitcout scope(backup);\n"
+        text += "std::stringstream   redirectStream;\n"
+        text += "std::cout.rdbuf(redirectStream.rdbuf());\n"
 
-        text += "std::string " + this.convertCommand(command.name) + "() {\n"
         text += this.convertCommand(command.body) + "; \n"
-        text += "return \"\"; \n"
+
+        text += "return redirectStream.str(); \n"
         text += "}\n"
 
         this.functiondefs += text
+        this.functionnames.push(this.convertCommand(command.name))
         return ""
     }
 
@@ -1144,6 +1173,25 @@ class ConvertBash {
     }
 
     public handleCommands(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any) {
+        for (let v = 0; v < this.functionnames.length; v++) {
+            let func = this.functionnames[v]
+            if (func == name) {
+                let text = ""
+                let length = 0
+                if (suffixarray) {
+                    length = suffixarray.length
+                    for (let s = 0; s < suffixarray.length; s++) {
+                        let suf = this.convertCommand(suffixarray[s])
+                        if (!suffixarray[s].expansion)
+                            suf = '"' + suf + '"'
+                        text += suf
+                        if (s != (suffixarray.length - 1))
+                            text +=  ","
+                    }
+                }
+                return name + "({" + text + "})"
+            }
+        }
         switch (name) {
             case 'exit':
                 {
@@ -1154,6 +1202,11 @@ class ConvertBash {
                 return "break"
             case 'continue':
                 return "continue"
+            case 'return':
+                {
+                    const retval = suffixprocessed ? "std::string(" + suffixprocessed + ")" : "get_env(\"?\")"
+                    return "return " + retval
+                }
             case 'set':
                 if (suffixprocessed) {
                     suffixprocessed = "\") + " + suffixprocessed
@@ -1209,15 +1262,38 @@ class ConvertBash {
                         text += "exec("
                     }
 
-                    if (suffixprocessed) {
-                        suffixprocessed = "\") + " + suffixprocessed
+                    let expanded = false
+                    if (suffixarray) {
+                        for (let v = 0; v < suffixarray.length; v++)
+                        {
+                            if (suffixarray[v].expansion) {
+                                expanded = true
+                                break
+                            }
+                        }
                     }
 
-                    text += "std::string(\"" + name
-                    if (suffixprocessed)
-                        text += " " + suffixprocessed
-                    else
-                        text += "\")"
+                    if (expanded) {
+                        if (suffixprocessed) {
+                            suffixprocessed = "\") + " + suffixprocessed
+                        }
+                        text += "std::string(\"" + name
+                        if (suffixprocessed)
+                            text += " " + suffixprocessed
+                        else
+                            text += "\")"
+                    } else {
+                        if (!suffixprocessed)
+                            suffixprocessed = ""
+
+                        if (suffixprocessed[0] == '"')
+                            suffixprocessed = suffixprocessed.substr(1)
+                        if (suffixprocessed[suffixprocessed.length -1] == '"')
+                            suffixprocessed = suffixprocessed.substr(0, suffixprocessed.length - 1)
+
+                        suffixprocessed = this.escapeDoubleQuotes(suffixprocessed)
+                        text += '"' + name + " " + suffixprocessed + '"'
+                    }
 
                     if (issuesystem) {
                         text += ")"
@@ -1466,23 +1542,26 @@ class ConvertBash {
             return env ? env[0] == '\\0' : true; \n\
         }\n\
         \n\
-        void set_env(const char *cmd, const std::string &value) { \n\
+        const std::string set_env(const char *cmd, const std::string &value) { \n\
             if (value.back() == '\\n')\n\
                 setenv(cmd, value.substr(0, value.size()-1).c_str(), 1);\n\
             else \n\
                 setenv(cmd, value.c_str(), 1);\n\
+            return \"\";\n\
         }\n\
         \n\
-        void set_env(const char *cmd, const char *value) { \n\
+        const std::string set_env(const char *cmd, const char *value) { \n\
             setenv(cmd, value, 1);\n\
+            return \"\";\n\
         }\n\
         \n\
-        void set_env(const char *cmd, const float value) { \n\
+        const std::string set_env(const char *cmd, const float value) { \n\
             setenv(cmd, std::to_string(value).c_str(), 1);\n\
-        }\n\
+            return \"\";\n\        }\n\
         \n\
-        void set_env(const char *cmd, const int value) { \n\
+        const std::string set_env(const char *cmd, const int value) { \n\
             setenv(cmd, std::to_string(value).c_str(), 1);\n\
+            return \"\";\n\
         }\n\
         \n\
         void set_env(const char *cmd, const char value) { \n\
@@ -1765,6 +1844,7 @@ try {
         "#include <stdio.h>\n" +
         "#include <string.h>\n" +
         "#include <string>\n" +
+        "#include <stdarg.h>\n" +
         "#include <memory>\n" +
         "#include <iostream>\n" +
         "#include <regex>\n" +
@@ -1775,7 +1855,14 @@ try {
         "#include <fstream>\n" +
         "#include <sys/stat.h>\n" +
         converter.getSupportDefinitions() +
+        "class scopeexitcout{\n" +
+        "std::streambuf *m_backup;\n" +
+        "public:\n" +
+        "scopeexitcout(std::streambuf * backup): m_backup(backup){}\n" +
+        "~scopeexitcout(){std::cout.rdbuf(m_backup);}\n" +
+        "};\n" +
         converter.getFunctionDefinitions() +
+        "\n" +
         "int main(int argc, const char *argv[]) {\n" +
         argstr + 
         parseresult +
