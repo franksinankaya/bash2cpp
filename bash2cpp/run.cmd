@@ -3,9 +3,6 @@
 REM terminates in app.ts
 REM banner.sh
 
-REM won't compile
-REM checkroot.sh
-
 REM terminates in app.ts
 REM dmesg.sh
 
@@ -24,13 +21,13 @@ REM populate-volatile.sh
 REM won't compile
 REM read-only-rootfs-hook.sh
 
-REM won't compile
-REM urandom
-
 IF NOT EXIST gen GOTO mkdir gen
 
 for %%x in (
+		checkroot.sh
+		urandom
 		mountnfs.sh
+		redirect.sh
 		umountnfs.sh
         while0.sh
         read.sh

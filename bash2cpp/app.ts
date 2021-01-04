@@ -570,9 +570,8 @@ class ConvertBash {
             if (clausecommands.name.text != "!")
                 clause = " checkval(" + this.convertExecCommand(clausecommands, false) + ")"
             else {
-                const clauseexpansion = clausecommands.suffix.map(c => this.convertCommand(c)).join(' ');
-
-                clause = "!checkval(\"" + clauseexpansion + "\")"
+                const clauseexpansion = this.convertExecCommand(clausecommands, false, false)
+                clause = "!checkval(" + clauseexpansion + ")"
             }
         }
 
@@ -710,7 +709,7 @@ class ConvertBash {
         return text;
     }
 
-    private convertExpansion(varray: any): [string, boolean] {
+    private convertExpansion(varray: any, skipRedirects: any): [string, boolean] {
         let suffix = '';
 
         if (varray) {
@@ -725,6 +724,8 @@ class ConvertBash {
 
             if (hasExpansion == false) {
                 for (let i = 0; i < varray.length; i++) {
+                    if (skipRedirects && (varray[i].type == "Redirect"))
+                        continue
                     suffix += this.convertCommand(varray[i])
                     if (i != (varray.length - 1))
                         suffix += " "
@@ -733,6 +734,8 @@ class ConvertBash {
                 suffix = '"' + suffix + '"'
             } else {
                 for (let i = 0; i < varray.length; i++) {
+                    if (skipRedirects && (varray[i].type == "Redirect"))
+                        continue
                     if (varray[i].expansion) {
 
                         if (i > 0) {
@@ -797,6 +800,110 @@ class ConvertBash {
         return JSON.parse(JSON.stringify(expression));
     }
 
+    public convertIoNumber(command: any): string {
+        return command.text
+    }
+
+    public convertStdRedirects(redirections: any, index: any, maintext: any): string {
+        let text = ""
+        if (redirections) {
+            text += "{\n"
+            if (redirections.length <= index)
+                this.terminate(redirections)
+            let file
+            if (!redirections[index].file.expansion)
+                file = "\"" + this.convertCommand(redirections[index].file) + "\""
+            else
+                file = this.convertCommand(redirections[index].file)
+
+            let numberIo = redirections[index].numberIo ? parseInt(redirections[index].numberIo.text) : 1
+            text += "std::streambuf *backup;\n"
+            if (redirections[index].op.text == ">") {
+                if (numberIo == 2) {
+                    text += "backup = std::cerr.rdbuf();\n"
+                    text += "std::ofstream file(" + file + ");\n"
+                    text += "if (file) std::cerr.rdbuf(file.rdbuf());\n"
+                } else {
+                    text += "backup = std::cout.rdbuf();\n"
+                    text += "std::ofstream file(" + file + ");\n"
+                    text += "if (file) std::cout.rdbuf(file.rdbuf());\n"
+                }
+            }
+            else if (redirections[index].op.text == ">>") {
+                if (numberIo == 2) {
+                    text += "backup = std::cerr.rdbuf();\n"
+                    text += "std::ofstream file;\n"
+                    text += "file.open(" + file + ", std::ios_base::app);\n"
+                    text += "if (file) std::cerr.rdbuf(file.rdbuf());\n"
+                } else {
+                    text += "backup = std::cout.rdbuf();\n"
+                    text += "std::ofstream file;\n"
+                    text += "file.open(" + file + ", std::ios_base::app);\n"
+                    text += "if (file) std::cout.rdbuf(file.rdbuf());\n"
+                }
+            }
+            else if (redirections[index].op.text == "<") {
+                text += "backup = std::cin.rdbuf();\n"
+                text += "std::ifstream file(" + file + ");\n"
+                text += "if (file) std::cin.rdbuf(file.rdbuf());\n"
+            }
+            else if (redirections[index].op.text == ">&") {
+                file = parseInt(redirections[index].file.text)
+                if (numberIo == 2) {
+                    if (file == 1)
+                        file = "std::cout.rdbuf()"
+                    else if (file == 0)
+                        file = "std::cin.rdbuf()"
+                    else if (file == 2)
+                        file = "std::cerr.rdbuf()"
+                    else
+                        this.terminate(redirections)
+                    text += "backup = std::cerr.rdbuf();\n"
+                    text += "auto rdbuf(" + file + ");\n"
+                    text += "std::cerr.rdbuf(rdbuf);\n"
+                } else if (numberIo == 1){
+                    if (file == 1)
+                        file = "std::cout.rdbuf()"
+                    else if (file == 0)
+                        file = "std::cin.rdbuf()"
+                    else if (file == 2)
+                        file = "std::cerr.rdbuf()"
+                    else
+                        this.terminate(redirections)
+                    text += "backup = std::cout.rdbuf();\n"
+                    text += "auto rdbuf(" + file + ");\n"
+                    text += "std::cout.rdbuf(rdbuf);\n"
+                } 
+                else if (numberIo == 0){
+                        this.terminate(redirections)
+                }
+            }
+            else
+                this.terminate(redirections[index])
+        }
+        text += maintext + ";"
+        if (redirections && (redirections[index].type == "Redirect")) {
+            let numberIo = redirections[index].numberIo ? parseInt(redirections[index].numberIo.text) : 1
+            if ((redirections[index].op.text == ">") ||
+                (redirections[index].op.text == ">&") ||
+                (redirections[index].op.text == ">>")){
+                if (numberIo == 2) {
+                    text += "std::cerr.rdbuf(backup);\n"
+                } else {
+                    text += "std::cout.rdbuf(backup);\n"
+                }
+            }
+            else if (redirections[index].op.text == "<") {
+                text += "std::cin.rdbuf(backup);\n"
+            }
+            else
+                this.terminate(redirections[index])
+            text += "}\n"
+        }
+
+        return text
+    }
+
     public convertSubshell(command: any): string {
         if (command.list.commands.length == 1) {
             let cmd;
@@ -816,7 +923,8 @@ class ConvertBash {
             if (!cmd.suffix) {
                 try {
                     arithmeticAST = babylon.parse(expression);
-                    return this.convertArithmeticAST(arithmeticAST.program.body[0].expression, expression)
+                    if (arithmeticAST.program.body.length)
+                        return this.convertArithmeticAST(arithmeticAST.program.body[0].expression, expression)
                 } catch (err) {
                     //throw new SyntaxError(`Cannot parse arithmetic expression "${cmd.name.text}": ${err.message}`);
                 }
@@ -835,20 +943,10 @@ class ConvertBash {
             }
         }
 
-        let text = ""
-        text += "{\n"
-        if (command.redirections) {
-            text += "std::streambuf *backup;\n"
-            text += "backup = std::cout.rdbuf();\n"
-            text += "std::ifstream file(\"" + this.convertCommand(command.redirections[0].file) + "\");\n"
-            text += "if (file) std::cout.rdbuf(file.rdbuf());\n"
-        }
-        text += command.list.commands.map(c => this.convertCommand(c)).join(';') + ";"
-        if (command.redirections && (command.redirections[0].type == "Redirect")) {
-            text += "std::cout.rdbuf(backup);\n"
-        }
-        text += "}\n"
-        return text
+        let maintext = command.list.commands.map(c => this.convertCommand(c)).join(';') + ";"
+        if (command.redirections && command.redirections.length != 1)
+            this.terminate(command)
+        return this.convertStdRedirects(command.redirections, 0, maintext)
     }
 
     public convertFor(command: any): string {
@@ -1006,132 +1104,176 @@ class ConvertBash {
         const [clause, thenval, ] = this.convertIfStatement(command, command.clause.commands[0], command.do)
 
         let text = ""
-        text += "{\n"
+        let maintext = ""
+        maintext += "while ( "
         if (command.redirections) {
-            if (command.redirections.length != 1)
-                this.terminate(command)
-            text += "std::streambuf *backup;\n"
-            text += "backup = std::cin.rdbuf();\n"
-            text += "std::ifstream file(" + this.convertCommand(command.redirections[0].file) + ");\n"
-            text += "if (file) std::cin.rdbuf(file.rdbuf());\n"
+            maintext += " file && "
         }
-        text += "while ( "
-        if (command.redirections) {
-            text += " file && "
-        }
-        text += clause + ") {\n"
-        text += thenval
-        text += "\n}\n"
-        if (command.redirections) {
-            text += "std::cin.rdbuf(backup);\n"
-        }
-        text += "}\n"
+        maintext += clause + ") {\n"
+        maintext += thenval
+        maintext += "\n}\n"
 
+        if (command.redirections && command.redirections.length != 1)
+            this.terminate(command)
+        text += this.convertStdRedirects(command.redirections, 0, maintext)
         return text
     }
     public convertRedirect(command: any): string {
-        let file = this.convertCommand(command.file)
+        if (0)
+        {
+            let file = this.convertCommand(command.file)
 
-        if (!command.file.expansion)
-            file = "\"" + file
-        else
-            file += "+\""
-
-        return "\" + std::string(\"" + command.op.text + "\") + " + file;
+            if (!command.file.expansion)
+                file = "\"" + file
+            else
+                file += "+\""
+            return "\" + std::string(\"" + command.op.text + "\") + " + file;
+        }
+        {
+            let file = command.file ? this.convertCommand(command.file) : ""
+            let numberIo = command.numberIo ? this.convertCommand(command.numberIo) : ""
+            let op = command.op.text
+            let text = ""
+            //text += "\" + std::string(\"" + command.op.text + "\") + " + file;
+            text += numberIo + op + file
+            return text
+        }
     }
     public convertCompoundList(command: any): string {
         return command.commands.map(c => this.convertCommand(c)).join(';\n');
     }
 
-    public convertExecCommand(command: any, issuesystem: any = true): string {
+    public handleCommands(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any) {
+        switch (name) {
+            case 'exit':
+                {
+                    const retval = suffixprocessed ? "mystoi(std::string(" + suffixprocessed + "))" : "mystoi(get_env(\"?\"))"
+                    return "exit(" + retval + ")"
+                }
+            case 'break':
+                return "break"
+            case 'continue':
+                return "continue"
+            case 'set':
+                if (suffixprocessed) {
+                    suffixprocessed = "\") + " + suffixprocessed
+                }
+
+                if (suffixarray && suffixarray.length === 1 && suffixarray[0].text === '-e') {
+                    console.log('skipping "set -e"');
+                    return '';
+                } else {
+                    return `${name}${suffixprocessed}`;
+                }
+            case 'read':
+                return "readval(" + suffixprocessed + ")"
+            case 'echo':
+                {
+                    let text = ""
+
+                    if (issuesystem) {
+                        text += "echo("
+
+                        if (suffixprocessed)
+                            text += suffixprocessed
+                        else
+                            text += "\"\""
+
+                        text += ")"
+                        return text
+                    }
+                }
+            // falls through
+            case 'cd':
+                {
+                    let text = ""
+
+                    if (issuesystem) {
+                        text += "cd("
+
+                        if (suffixprocessed)
+                            text += suffixprocessed
+                        else
+                            text += "\"\""
+
+                        text += ")"
+                        return text
+                    }
+                }
+            // falls through
+            default:
+                {
+                    let text = ""
+
+                    if (issuesystem) {
+                        text += "exec("
+                    }
+
+                    if (suffixprocessed) {
+                        suffixprocessed = "\") + " + suffixprocessed
+                    }
+
+                    text += "std::string(\"" + name
+                    if (suffixprocessed)
+                        text += " " + suffixprocessed
+                    else
+                        text += "\")"
+
+                    if (issuesystem) {
+                        text += ")"
+                    }
+
+                    return text
+                }
+        }
+    }
+
+    public trimTrailingSpaces(suffix: any) {
+        if (suffix) {
+            if (suffix.length > 1) {
+                if (suffix[suffix.length - 1] == "\"" && suffix[suffix.length - 2] == " ") {
+                    suffix = suffix.slice(0, -1)
+                    suffix = suffix.trim()
+                    suffix += "\""
+                }
+            }
+        }
+        return suffix
+    }
+
+    public convertExecCommand(command: any, issuesystem: any = true, handlecommands: any = true): string {
         if (command.prefix && command.prefix.length && (!command.name || !command.name.text)) {
             return command.prefix.map(c => this.convertCommand(c)).join(';\n');
         }
         if (command.name && command.name.text) {
-            let [suffix, ] = command.suffix ? this.convertExpansion(command.suffix) : ["", false];
-
-            switch (command.name.text) {
-                case 'exit':
-                    {
-                        const retval = suffix ? "mystoi(std::string(" + suffix + "))" : "mystoi(get_env(\"?\"))"
-                        return "exit(" + retval + ")"
-                    }
-                case 'break':
-                    return "break"
-                case 'continue':
-                    return "continue"
-                case 'set':
-                    if (suffix) {
-                        suffix = "\") + " + suffix
-                    }
-
-                    if (command.suffix && command.suffix.length === 1 && command.suffix[0].text === '-e') {
-                        console.log('skipping "set -e"');
-                        return '';
-                    } else {
-                        return `${command.name.text}${suffix}`;
-                    }
-                case 'read':
-                    return "readval(" + suffix + ")"
-                case 'echo':
-                    {
-                        let text = ""
-
-                        if (issuesystem) {
-                            text += "echo("
-
-                            if (suffix)
-                                text += suffix
-                            else
-                                text += "\"\""
-
-                            text += ")"
-                            return text
-                        }
-                    }
-                    // falls through
-                case 'cd':
-                    {
-                        let text = ""
-
-                        if (issuesystem) {
-                            text += "cd("
-
-                            if (suffix)
-                                text += suffix
-                            else
-                                text += "\"\""
-
-                            text += ")"
-                            return text
-                        }
-                    }
-                    // falls through
-                default:
-                    {
-                        let text = ""
-
-                        if (issuesystem) {
-                            text += "exec("
-                        }
-
-                        if (suffix) {
-                            suffix = "\") + " + suffix
-                        }
-
-                        text += "std::string(\"" + command.name.text
-                        if (suffix)
-                            text += " " + suffix
-                        else
-                            text += "\")"
-
-                        if (issuesystem) {
-                            text += ")"
-                        }
-
-                        return text
-                    }
+            let ignoreRedirects = issuesystem
+            if (command.name.text == "exec")
+                ignoreRedirects = false
+            let [suffix,] = command.suffix ? this.convertExpansion(command.suffix, ignoreRedirects) : ["", false];
+            if ((suffix != "") && (suffix[suffix.length - 1] != "\"")) {
+                if (!command.suffix[command.suffix.length - 1].expansion)
+                    suffix += "\""
             }
+            suffix = this.trimTrailingSpaces(suffix)
+            let redirecttext = ""
+            if (command.suffix && ignoreRedirects) {
+                const maintext = this.handleCommands(command.name.text, command.suffix, suffix, issuesystem)
+                redirecttext = maintext
+                for (let i = 0; i < command.suffix.length; i++) {
+                    if ((command.suffix[i].type == "Redirect")) {
+                        redirecttext = this.convertStdRedirects(command.suffix, i, redirecttext)
+                    }
+                }
+            }
+
+            if (issuesystem && (redirecttext != "")) {
+                return redirecttext
+            }
+
+            if (handlecommands)
+                return this.handleCommands(command.name.text, command.suffix, suffix, issuesystem)
+            else
+                return suffix
         }
         this.terminate(command)
     }
@@ -1222,6 +1364,8 @@ class ConvertBash {
                 return this.convertFor(command);
             case 'Subshell':
                 return this.convertSubshell(command);
+            case 'io_number':
+                return this.convertIoNumber(command);
         }
         this.terminate(command)
     }
