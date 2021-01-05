@@ -1,8 +1,9 @@
 #!/bin/bash
 
 declare -a arr=(
+				"if9.sh"
 				"redirect.sh"
-				# "while0.sh"
+				"while0.sh"
 				"for0.sh"
 				"if3.sh"
 				"arguments.sh"

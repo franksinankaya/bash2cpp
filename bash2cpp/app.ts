@@ -382,7 +382,7 @@ class ConvertBash {
                 }
             case "!-n":
                 {
-                    const val = !rightexpansion ? rightValue : '"' + rightexpansion[0].parameter + '"'
+                    let val = !rightexpansion ? rightValue : '"' + rightexpansion[0].parameter + '"'
                     if (rightexpansion)
                         clause = "!envexists_and_hascontent(" + (!rightexpansion ? "\"" : "") + val + (!rightexpansion ? "\"" : "") + ")"
                     else
@@ -391,9 +391,13 @@ class ConvertBash {
                 break
             case "!-z":
                 {
-                    const val = !rightexpansion ? rightValue : '"' + rightexpansion[0].parameter + '"'
-                    if (rightexpansion)
+                    let val = !rightexpansion ? rightValue : '"' + rightexpansion[0].parameter + '"'
+                    if (rightexpansion && rightexpansion[0].parameter)
                         clause = "!envempty(" + (!rightexpansion ? "\"" : "") + val + (!rightexpansion ? "\"" : "") + ")"
+                    else if (rightexpansion) {
+                        val = rightValue
+                        clause = rightValue + ".size() != 0"
+                    }
                     else
                         clause = rightValue.length == 0 ? "0" : "1"
                 }
@@ -413,7 +417,7 @@ class ConvertBash {
         return [op, clause];
     }
 
-    private convertOneCondition(clausecommands: any): string {
+    private convertOneCondition(clausecommands: any, startindex: any): string {
         let leftValue = null
         let leftValueExpansion = null
         let opValue = null
@@ -429,15 +433,15 @@ class ConvertBash {
         let redirectBug = false
 
         if (skipname == false) {
-            leftindex = -1
+            leftindex = -1 + startindex
             leftValue = this.convertCommand(clausecommands.name)
             leftValueExpansion = clausecommands.expansion ? clausecommands.expansion : clausecommands.name.expansion
             if (leftValue == "!") {
-                leftindex = 0
+                leftindex = 0 + startindex
                 leftValue = this.convertCommand(clausecommands.suffix[leftindex])
                 leftValueExpansion = clausecommands.suffix[leftindex].expansion
                 if ((leftValue == "[") || (leftValue == "[[") || (leftValue == "test")) {
-                    leftindex = 1
+                    leftindex = 1 + startindex
                     leftValue = this.convertCommand(clausecommands.suffix[leftindex])
                     leftValueExpansion = clausecommands.suffix[leftindex].expansion
                 }
@@ -445,7 +449,7 @@ class ConvertBash {
             }
             opValue = clausecommands.suffix.length > (leftindex + 1) ? this.convertCommand(clausecommands.suffix[leftindex + 1]) : ""
 
-            rightValue = clausecommands.suffix.length > (leftindex + 2) ? this.convertCommand(clausecommands.suffix[leftindex + 2]) : ""
+            rightValue = clausecommands.suffix.length > (leftindex + 2) ? this.convertCommand(clausecommands.suffix[leftindex + 2]) : null
             rightValueExpansion = clausecommands.suffix.length > (leftindex + 2) ? clausecommands.suffix[leftindex + 2].expansion : null
 
             // bash-parser bug
@@ -462,17 +466,17 @@ class ConvertBash {
 
         }
         else if (clausecommands.suffix) {
-            leftindex = 0
+            leftindex = 0 + startindex
             leftValue = this.convertCommand(clausecommands.suffix[leftindex])
             leftValueExpansion = clausecommands.suffix[leftindex].expansion
             if (leftValue == "!") {
-                leftindex = 1
+                leftindex = 1 + startindex
                 leftValue = this.convertCommand(clausecommands.suffix[leftindex])
                 leftValueExpansion = clausecommands.suffix[leftindex].expansion
                 leftValue = "!" + leftValue
             }
             opValue = clausecommands.suffix.length > (leftindex + 1) ? this.convertCommand(clausecommands.suffix[leftindex + 1]) : ""
-            rightValue = clausecommands.suffix.length > (leftindex + 2) ? this.convertCommand(clausecommands.suffix[leftindex + 2]) : ""
+            rightValue = clausecommands.suffix.length > (leftindex + 2) ? this.convertCommand(clausecommands.suffix[leftindex + 2]) : null
             rightValueExpansion = clausecommands.suffix.length > (leftindex + 2) ? clausecommands.suffix[leftindex + 2].expansion : null
         }
         else {
@@ -485,7 +489,7 @@ class ConvertBash {
         let clause = ""
 
         if ((clausecommands.suffix.length > 1) || redirectBug) {
-            if ((rightValue == "]]") || (rightValue == "]") || (rightValue == "")) {
+            if ((rightValue == "]]") || (rightValue == "]") || (rightValue == null)|| (rightValue == "-o") || (rightValue == "-a")) {
                 rightValueExpansion = clausecommands.suffix.length > (leftindex + 1) ? clausecommands.suffix[leftindex + 1].expansion : null
                 rightValue = opValue
                 opValue = leftValue
@@ -493,7 +497,7 @@ class ConvertBash {
                 leftValueExpansion = null
             }
 
-            if (rightValue && rightValue != ']')
+            if ((rightValue != null) && rightValue != ']')
                 [, clause] = this.convertCondition(leftValue, rightValue, opValue, rightValueExpansion, leftValueExpansion)
             else {
                 if (clausecommands.suffix && clausecommands.suffix[0].expansion)
@@ -567,7 +571,30 @@ class ConvertBash {
         let name = clausecommands.name ? clausecommands.name.text : ""
         if (intest || (name == "test") || (name == "[") || (name == "[[") ||
             (name == "!") && ((clausecommands.suffix[0].text == "test") || (clausecommands.suffix[0].text == "[") || (clausecommands.suffix[0].text == "[["))) {
-            clause = this.convertOneCondition(clausecommands)
+
+            let combinedExpressionIndex = [-1]
+
+            if (clausecommands.suffix) {
+                for (let i = 0; i < clausecommands.suffix.length; i++) {
+                    if (clausecommands.suffix[i].text == "-o")
+                        combinedExpressionIndex.push(i)
+                    if (clausecommands.suffix[i].text == "-a")
+                        combinedExpressionIndex.push(i)
+                }
+            }
+
+            if (combinedExpressionIndex.length == 1)
+                clause = this.convertOneCondition(clausecommands, 0)
+            else {
+                for (let v = 0; v < combinedExpressionIndex.length; v++) {
+                    clause = clause + "(" + this.convertOneCondition(clausecommands, combinedExpressionIndex[v] + 1) + ")"
+                    if ((v != (combinedExpressionIndex.length - 1)) && (clausecommands.suffix[combinedExpressionIndex[v + 1]].text == "-o")) {
+                        clause += "||"
+                    }
+                    if ((v != (combinedExpressionIndex.length - 1)) && (clausecommands.suffix[combinedExpressionIndex[v + 1]].text == "-a"))
+                        clause += "&&"
+                }
+            }
 
             if (clausecommands.suffix[clausecommands.suffix.length - 1].text != "]")
                 intest = true
