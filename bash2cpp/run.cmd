@@ -3,9 +3,6 @@
 REM terminates in app.ts
 REM banner.sh
 
-REM terminates in app.ts
-REM hostname.sh
-
 REM won't compile
 REM logic.sh
 
@@ -18,6 +15,7 @@ REM read-only-rootfs-hook.sh
 IF NOT EXIST gen GOTO mkdir gen
 
 for %%x in (
+		hostname.sh
         if.sh
 		functions
 		dmesg.sh
@@ -59,5 +57,5 @@ for %%x in (
 	)
 	astyle -q -n gen/%%~nx.cpp
 	echo "compiling gen/%%~nx.cpp"
-	wsl g++ gen/%%~nx.cpp -o gen/%%~nx -lpcre -std=c++17
+	wsl g++ gen/%%~nx.cpp -o gen/%%~nx -lpcre -std=c++17 -g
 )

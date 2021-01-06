@@ -12,3 +12,5 @@ echo "Hello" | tr -d "el" #Result: Ho
 echo "The quick brown fox" | sed 's/brown/red/' #Result: The quick red fox
 
 echo "Hello, hello, hello" | sed 's/hello/goodbye/' #Result: Hello, goodbye, hello
+
+dmesg | head -n 10

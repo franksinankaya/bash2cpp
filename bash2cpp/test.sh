@@ -1,6 +1,9 @@
 #!/bin/bash
 
 declare -a arr=(
+				"redirection.sh"
+				"pipeline.sh"
+				"hostname0.sh"
 				"if9.sh"
 				"redirect.sh"
 				"while0.sh"

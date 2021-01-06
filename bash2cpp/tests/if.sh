@@ -5,9 +5,9 @@ else
 fi
 
 
-# if [ -z "$HOSTNAME" -o "$HOSTNAME" = "(none)" -o ! -z "`echo $HOSTNAME | sed -n '/^[0-9]*\.[0-9].*/p'`" ] ; then
-    # echo "hello"
-# fi
+if [ -z "$HOSTNAME" -o "$HOSTNAME" = "(none)" -o ! -z "`echo $HOSTNAME | sed -n '/^[0-9]*\.[0-9].*/p'`" ] ; then
+    echo "hello"
+fi
 
 if [ -z ${Var+x} ]; 
 then 
@@ -59,15 +59,15 @@ fi
 if grep -q Bash file
  then echo "File contains at least one occurrence of Bash."
 fi
-# word=Linux
-# letter_sequence=inu
-# if echo "$word" | grep -q "$letter_sequence"
+word=Linux
+letter_sequence=inu
+if echo "$word" | grep -q "$letter_sequence"
 ##The "-q" option to grep suppresses output.
-# then
- # echo "$letter_sequence found in $word"
-# else
- # echo "$letter_sequence not found in $word"
-# fi
+then
+ echo "$letter_sequence found in $word"
+else
+ echo "$letter_sequence not found in $word"
+fi
 # if COMMAND_WHOSE_EXIT_STATUS_IS_0_UNLESS_ERROR_OCCURRED
  # then echo "Command succeeded."
  # else echo "Command failed."
