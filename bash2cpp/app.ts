@@ -779,8 +779,9 @@ class ConvertBash {
         else if ((text[0] == '{') && (text[text.length - 1] == '}')) {
             let vals = []
             vals.push(command)
-            let [t, ] = this.convertRangeExpansion(vals, false, " ")
-            text = t
+            let [t,] = this.convertRangeExpansion(vals, false, " ")
+            if (t != "")
+                text = t
         }
 
         return text;
@@ -1105,7 +1106,11 @@ class ConvertBash {
             for (let s = 1; s < statements.length; s++) {
                 const limiters = statements[s].split("..")
                 let start = limiters[0]
+                if (!start)
+                    return ["", ""]
                 let end = limiters[1]
+                if (!end)
+                    return ["", ""]
                 let increment = limiters.length > 2 ? parseInt(limiters[2].substring(0, limiters[2].length - 1)) : 1
                 text += this.getRange(start, end, increment, delimiter, assignment)
             }
@@ -1284,10 +1289,15 @@ class ConvertBash {
         return command.commands.map(c => this.convertCommand(c)).join(';\n');
     }
 
-    public handleCommands(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any, inbound:any) {
+    public handleCommands(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any, inbound: any) {
+        let nametext = this.convertCommand(name)
+        let nameexpanded = false
+        if (name.expansion && name.expansion[0].loc.start >= 0) {
+            nameexpanded = true
+        }
         for (let v = 0; v < this.functionnames.length; v++) {
             let func = this.functionnames[v]
-            if (func == name) {
+            if (func == name.text) {
                 let text = ""
                 let length = 0
                 if (suffixarray) {
@@ -1301,10 +1311,10 @@ class ConvertBash {
                             text +=  ","
                     }
                 }
-                return name + "({" + text + "})"
+                return name.text + "({" + text + "})"
             }
         }
-        switch (name) {
+        switch (name.text) {
             case 'exit':
                 {
                     const retval = suffixprocessed ? "mystoi(std::string(" + suffixprocessed + "))" : "mystoi(get_env(\"?\"))"
@@ -1328,7 +1338,7 @@ class ConvertBash {
                     console.log('skipping "set -e"');
                     return '';
                 } else {
-                    return `${name}${suffixprocessed}`;
+                    return `${name.text}${suffixprocessed}`;
                 }
             case 'read':
                 return "readval(" + suffixprocessed + ")"
@@ -1375,6 +1385,9 @@ class ConvertBash {
                     }
 
                     let expanded = false
+                    if (nameexpanded) {
+                        expanded = true
+                    }
                     if (suffixarray) {
                         for (let v = 0; v < suffixarray.length; v++)
                         {
@@ -1387,13 +1400,23 @@ class ConvertBash {
 
                     if (expanded) {
                         if (suffixprocessed) {
-                            suffixprocessed = "\") + " + suffixprocessed
+                            if (!nameexpanded)
+                                suffixprocessed = "\") + " + suffixprocessed
+                            else
+                                suffixprocessed = ") + " + suffixprocessed
                         }
-                        text += "std::string(\"" + name
+
+                        text += "std::string("
+                        if (!nameexpanded)
+                            text += "\""
+                        else
+                            text += ""
+                        text += nametext
                         if (suffixprocessed)
                             text += " " + suffixprocessed
-                        else
+                        else {
                             text += "\")"
+                        }
                     } else {
                         if (!suffixprocessed)
                             suffixprocessed = ""
@@ -1404,7 +1427,18 @@ class ConvertBash {
                             suffixprocessed = suffixprocessed.substr(0, suffixprocessed.length - 1)
 
                         suffixprocessed = this.escapeDoubleQuotes(suffixprocessed)
-                        text += '"' + name + " " + suffixprocessed + '"'
+                        if (!nameexpanded)
+                            text += "\""
+                        else
+                            text += ""
+
+                        if (nametext[nametext.length - 1] == '"')
+                            nametext = nametext.substring(0, nametext.length - 1)
+                        if (nametext[0] == '"')
+                            nametext = nametext.substring(1)
+
+                        text += nametext
+                        text += " " + suffixprocessed + '"'
                     }
 
                     if (issuesystem) {
@@ -1437,8 +1471,9 @@ class ConvertBash {
             return command.prefix.map(c => this.convertCommand(c)).join(';\n');
         }
         if (command.name && command.name.text) {
+            let nametext = this.convertCommand(command.name)
             let ignoreRedirects = issuesystem
-            if (command.name.text == "exec")
+            if (nametext == "exec")
                 ignoreRedirects = false
             let [suffix,] = command.suffix ? this.convertExpansion(command.suffix, ignoreRedirects) : ["", false];
             if ((suffix != "") && (suffix[suffix.length - 1] != "\"")) {
@@ -1448,7 +1483,7 @@ class ConvertBash {
             suffix = this.trimTrailingSpaces(suffix)
             let redirecttext = ""
             if (command.suffix && ignoreRedirects) {
-                const maintext = this.handleCommands(command.name.text, command.suffix, suffix, issuesystem, inbound)
+                const maintext = this.handleCommands(command.name, command.suffix, suffix, issuesystem, inbound)
                 redirecttext = maintext
                 for (let i = 0; i < command.suffix.length; i++) {
                     if ((command.suffix[i].type == "Redirect")) {
@@ -1462,7 +1497,7 @@ class ConvertBash {
             }
 
             if (handlecommands)
-                return this.handleCommands(command.name.text, command.suffix, suffix, issuesystem, inbound)
+                return this.handleCommands(command.name, command.suffix, suffix, issuesystem, inbound)
             else
                 return suffix
         }
@@ -1523,6 +1558,7 @@ class ConvertBash {
                     let offset = command.offset
                     if (offset < 0)
                         offset = "get_env(\"" + command.parameter + "\").size() " + offset
+
                     return "get_env(\"" + command.parameter + "\").substr(" + offset + ",  std::string::npos)";
                 }
             }
