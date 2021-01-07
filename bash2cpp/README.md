@@ -24,7 +24,6 @@
 * . /etc/default/rcS
 * VALS=( 'five' 'four' 'three' 'two' 'one' ) for ITEM in "${VALS[@]}"; do
 * ${other:-default_value}
-* echo $(( x++ ))
 * if [ -z ${VAR+x} ]; 
 * dmesg -s 131072 > gen/dmesg  doesn't work
 * echo {A..Z}{0..9} does not work

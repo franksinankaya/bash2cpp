@@ -69,9 +69,15 @@ class ConvertBash {
             }
             switch (arithmeticAST.operator) {
                 case "++":
-                    return "set_env(\"" + identifier + "\",  mystoi(" + val + ") + 1)"
+                    if (arithmeticAST.prefix)
+                        return "pre_increment(\"" + identifier + "\")"
+                    else
+                        return "post_increment(\"" + identifier + "\")"
                 case "--":
-                    return "set_env(\"" + identifier + "\",  mystoi(" + val + ") - 1)"
+                    if (arithmeticAST.prefix)
+                        return "pre_decrement(\"" + identifier + "\")"
+                    else
+                        return "post_decrement(\"" + identifier + "\")"
             }
             this.terminate(expression)
         }
@@ -2049,9 +2055,32 @@ class ConvertBash {
             set_env(\"PWD\", std::filesystem::current_path());\n\
             set_env(\"?\", 0);\n\
         }\n"
+
+        const incrementstr = "\n\
+        const std::string pre_increment(const std::string &variable) {\n\
+            int val = mystoi(get_env(variable)) + 1;\n\
+            set_env(variable.c_str(), val);\n\
+            return std::to_string(val);\n\
+        }\n\
+        const std::string post_increment(const std::string &variable) {\n\
+            int val = mystoi(get_env(variable)) + 1;\n\
+            set_env(variable.c_str(), val);\n\
+            return variable;\n\
+        }\n\
+        const std::string pre_decrement(const std::string &variable) {\n\
+            int val = mystoi(get_env(variable)) - 1;\n\
+            set_env(variable.c_str(), val);\n\
+            return std::to_string(val);\n\
+        }\n\
+        const std::string post_decrement(const std::string &variable) {\n\
+            int val = mystoi(get_env(variable)) - 1;\n\
+            set_env(variable.c_str(), val);\n\
+            return variable;\n\
+        }\n\
+        \n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
             + charfileexists + filereadable + fileexecutable + filewritable + direxists + envCommand + execCommand + splitCommand + regexstr + echostr
-            + cdstr + readstr;
+            + cdstr + readstr + incrementstr;
     }
 }
 
