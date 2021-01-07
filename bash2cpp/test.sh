@@ -1,13 +1,14 @@
 #!/bin/bash
 
 declare -a arr=(
+				"for0.sh"
+				"braceexpansion.sh"
 				"redirection.sh"
 				"pipeline.sh"
 				"hostname0.sh"
 				"if9.sh"
 				"redirect.sh"
 				"while0.sh"
-				"for0.sh"
 				"if3.sh"
 				"arguments.sh"
 				# "expansions.sh"

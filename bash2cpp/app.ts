@@ -776,6 +776,12 @@ class ConvertBash {
 
         if (text == " ")
             text = '"' + " " + '"'
+        else if ((text[0] == '{') && (text[text.length - 1] == '}')) {
+            let vals = []
+            vals.push(command)
+            let [t, ] = this.convertRangeExpansion(vals, false, " ")
+            text = t
+        }
 
         return text;
     }
@@ -802,7 +808,9 @@ class ConvertBash {
                         suffix += " "
                 }
 
-                suffix = '"' + suffix + '"'
+                const needsquote = (suffix.charAt(0) != "\"") && (suffix.charAt(suffix.length - 1) != "\"")
+                if (needsquote)
+                    suffix = '"' + suffix + '"'
             } else {
                 for (let i = 0; i < varray.length; i++) {
                     if (skipRedirects && (varray[i].type == "Redirect"))
@@ -1020,98 +1028,160 @@ class ConvertBash {
         return this.convertStdRedirects(command.redirections, 0, maintext)
     }
 
+    public getCharRange(start: any, end: any, assignment: any, delimiter: any) {
+        let text = ""
+        var i
+        for (i = start; i != end; i = this.nextChar(i)) {
+            if (assignment)
+                text += "\"" + i + "\""
+            else
+                text += i
+            if (i != (end)) {
+                if (assignment)
+                    text += delimiter
+                else
+                    text += " "
+            }
+        }
+        if (assignment)
+            text += "\"" + i + "\""
+        else
+            text += i
+
+        return text
+    }
+
+    public getNumberRange(start: any, end: any, increment: any, delimiter: any, assignment: any) {
+        let text = ""
+        if (end > start) {
+            for (let i = start; i <= end; i = i + increment) {
+                if (assignment)
+                    text += "\"" + i + "\""
+                else
+                    text += i
+                if (i != (end))
+                    text += delimiter
+            }
+        } else {
+            if (increment > 0)
+                increment = -increment
+            for (let i = start; i >= end; i = i + increment) {
+                if (assignment)
+                    text += "\"" + i + "\""
+                else
+                    text += i
+                if (i != (end))
+                    text += delimiter
+
+            }
+        }
+        return text
+    }
+
+    public getRange(start: any, end: any, increment: any, delimiter: any, assignment:any) {
+        let text = ""
+        if (this.isNumeric(start)) {
+            start = parseInt(start)
+            end = parseInt(end)
+            text += this.getNumberRange(start, end, increment, delimiter, assignment)
+        } else {
+            var i
+            end = end.substring(0, end.length - 1)
+            text += this.getCharRange(start, end, assignment, delimiter)
+        }
+        return text
+    }
+
+    public convertRangeExpansion(commandwordlist: any, assignment: any = true, delimiter: any = ","): [string, string] {
+        let text = ""
+        var countstr = ""
+        if ((commandwordlist.length == 1) && commandwordlist[0].text[0] == "{") {
+            const statements = commandwordlist[0].text.split("{")
+            if (!assignment)
+                text += "\""
+            if (assignment)
+                text += "const char *vals[] = {\n"
+
+            for (let s = 1; s < statements.length; s++) {
+                const limiters = statements[s].split("..")
+                let start = limiters[0]
+                let end = limiters[1]
+                let increment = limiters.length > 2 ? parseInt(limiters[2].substring(0, limiters[2].length - 1)) : 1
+                text += this.getRange(start, end, increment, delimiter, assignment)
+            }
+            if (!assignment)
+                text += "\""
+            if (assignment) {
+                text += "\n"
+                text += "};\n"
+                countstr = "int length = sizeof(vals)/sizeof(vals[0]);\n"
+            }
+        }
+        else if ((commandwordlist.length == 1) && this.isRegexExpression(commandwordlist[0].text)) {
+            if (assignment)
+                text += "std::vector<std::string> vals = {\n"
+            text += "globvector(\"" + commandwordlist[0].text + "\")"
+            if (assignment) {
+                text += "\n"
+                text += "};\n"
+                countstr = "int length = vals.size();\n"
+            }
+        }
+        else {
+            let hasExpansion = false;
+            var i
+            for (i = 0; i < commandwordlist.length; i++) {
+                if (commandwordlist[i].expansion) {
+                    hasExpansion = true
+                    break
+                }
+            }
+            if (assignment) {
+                if (hasExpansion)
+                    text += "std::vector<std::string> vals = {\n"
+                else
+                    text += "const char* vals[] = {\n"
+            }
+
+            if (!hasExpansion && !assignment)
+                text += "\""
+            for (i = 0; i < commandwordlist.length; i++) {
+                if (commandwordlist[i].expansion) {
+                    text += "regexsplit(" + this.convertCommand(commandwordlist[i]) + ")"
+                } else {
+                    if (hasExpansion)
+                        text += "std::string(\"" + commandwordlist[i].text + "\")"
+                    else if (assignment)
+                        text += "\"" + commandwordlist[i].text + "\""
+                    else
+                        text += commandwordlist[i].text
+                }
+                if (i != (commandwordlist.length - 1))
+                    text += delimiter
+            }
+            if (!hasExpansion && !assignment)
+                text += "\""
+            if (assignment) {
+                text += "\n"
+                text += "};\n"
+                if (hasExpansion)
+                    countstr = "int length = vals.size();\n"
+                else
+                    countstr = "int length = sizeof(vals) / sizeof(vals[0]);\n"
+            }
+        }
+
+        return [text, countstr]
+    }
+
     public convertFor(command: any): string {
         let text = ""
         let i
 
         text += "{\n"
-        if ((command.wordlist.length == 1) && command.wordlist[0].text[0] == "{") {
-            const limiters = command.wordlist[0].text.split("..")
-            let start = limiters[0].substring(1)
-            let end = limiters[1]
-            let increment = limiters.length > 2 ? parseInt(limiters[2].substring(0, limiters[2].length - 1))  : 1
-
-            if (this.isNumeric(start)) {
-                text += "int vals[] = {\n"
-                start = parseInt(start)
-                end = parseInt(end)
-                if (end > start) {
-                    for (i = start; i <= end; i = i + increment) {
-                        text += i
-                        if (i != (command.wordlist.length - 1))
-                            text += ","
-                    }
-                    text += "\n"
-                } else {
-                    if (increment > 0)
-                        increment = -increment
-                    for (i = start; i >= end; i = i + increment) {
-                        text += i
-                        if (i != (command.wordlist.length - 1))
-                            text += ","
-
-                    }
-                    text += "\n"
-                }
-            } else {
-                text += "const char *vals[] = {\n"
-                end = end.substring(0, end.length - 1)
-                for (i = start; i != end; i = this.nextChar(i)) {
-                    text += "\"" + i + "\""
-                    if (i != (command.wordlist.length - 1))
-                        text += ","
-
-                }
-                text += "\n"
-                text += "\"" + i + "\""
-                if (i != (command.wordlist.length - 1))
-                    text += ","
-
-                text += "\n"
-            }
-            text += "};\n"
-            text += "int length = sizeof(vals)/sizeof(vals[0]);\n"
-        }
-        else if ((command.wordlist.length == 1) && this.isRegexExpression(command.wordlist[0].text)) {
-            text += "std::vector<std::string> vals = {\n"
-            text += "globvector(\"" + command.wordlist[0].text + "\")"
-            text += "\n"
-            text += "};\n"
-            text += "int length = vals.size();\n"
-        }
-        else {
-            let hasExpansion = false;
-            for (i = 0; i < command.wordlist.length; i++) {
-                if (command.wordlist[i].expansion) {
-                    hasExpansion = true
-                    break
-                }
-            }
-
-            if (hasExpansion)
-                text += "std::vector<std::string> vals = {\n"
-            else
-                text += "const char* vals[] = {\n"
-            for (i = 0; i < command.wordlist.length; i++) {
-                if (command.wordlist[i].expansion) {
-                    text += "regexsplit(" + this.convertCommand(command.wordlist[i]) + ")"
-                } else {
-                    if (hasExpansion)
-                        text += "std::string(\"" + command.wordlist[i].text + "\")"
-                    else
-                        text += "\"" + command.wordlist[i].text + "\""
-                }
-                if (i != (command.wordlist.length - 1))
-                    text += ","
-
-            }
-            text += "\n"
-            text += "};\n"
-            if (hasExpansion)
-                text += "int length = vals.size();\n"
-            else
-                text += "int length = sizeof(vals) / sizeof(vals[0]);\n"
-        }
+        let [t, countstr] = this.convertRangeExpansion(command.wordlist)
+        text += t
+        text += countstr
         text += "for (int i =0; i < length; i++)"
         text += "{\n"
         text += "set_env(\"" + command.name.text + "\", vals[i]);\n"

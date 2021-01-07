@@ -28,6 +28,8 @@
 * echo $(( x++ ))
 * if [ -z ${VAR+x} ]; 
 * dmesg -s 131072 > gen/dmesg  doesn't work
+* echo {A..Z}{0..9} does not work
+* echo 1.{1..9}
 
 ## LOW PRIORITY
 * supports only 11 arguments
