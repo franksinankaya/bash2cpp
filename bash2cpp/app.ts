@@ -696,21 +696,7 @@ class ConvertBash {
     private convertOneFunction(name: any, body: any): string {
         let text = ""
         text += "std::string " + name + "(std::initializer_list<std::string> list) {\n"
-        text += "int i = 0;\n"
-        text += "std::string combinedargs;\n"
-        text += "set_env(\"#\", (int)list.size());\n"
-        text += "for (auto elem : list )\n"
-        text += "{\n"
-        text += "set_env(std::to_string(i + 1).c_str(), elem.c_str());\n"
-        text += "combinedargs += std::string(elem.c_str());\n"
-        text += "if (i != (list.size() - 1)) combinedargs += \" \";\n"
-        text += "i++;\n"
-        text += "}\n"
-        text += "for (int i = (int)list.size(); i < 11; i++) {\n"
-        text += "set_env(std::to_string(i).c_str(), \" \");\n"
-        text += "}\n"
-        text += "if (combinedargs.size() == 0) combinedargs = \" \";\n"
-        text += "set_env(\"@\", combinedargs);\n"
+        text += "processargs(list);\n"
         text += "std::streambuf * backup;\n"
         text += "backup = std::cout.rdbuf();\n"
         text += "std::stringstream   redirectStream;\n"
@@ -2090,6 +2076,27 @@ class ConvertBash {
             set_env(\"?\", 0);\n\
         }\n"
 
+        let text = ""
+        text += "void processargs(std::initializer_list<std::string> &list)\n"
+        text += "{\n"
+        text += "int i = 0;\n"
+        text += "std::string combinedargs;\n"
+        text += "set_env(\"#\", (int)list.size());\n"
+        text += "for (auto elem : list )\n"
+        text += "{\n"
+        text += "set_env(std::to_string(i + 1).c_str(), elem.c_str());\n"
+        text += "combinedargs += std::string(elem.c_str());\n"
+        text += "if (i != (list.size() - 1)) combinedargs += \" \";\n"
+        text += "i++;\n"
+        text += "}\n"
+        text += "for (int i = (int)list.size(); i < 11; i++) {\n"
+        text += "set_env(std::to_string(i).c_str(), \" \");\n"
+        text += "}\n"
+        text += "if (combinedargs.size() == 0) combinedargs = \" \";\n"
+        text += "set_env(\"@\", combinedargs);\n"
+        text += "}\n"
+        const processargsstr = text
+
         const incrementstr = "\n\
         const std::string pre_increment(const std::string &variable) {\n\
             int val = mystoi(get_env(variable), 0) + 1;\n\
@@ -2116,7 +2123,7 @@ class ConvertBash {
         \n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
             + charfileexists + filereadable + fileexecutable + filewritable + direxists + envCommand + execCommand + splitCommand + regexstr + echostr
-            + cdstr + readstr + incrementstr;
+            + cdstr + readstr + incrementstr + processargsstr;
     }
 }
 
