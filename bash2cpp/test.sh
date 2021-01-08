@@ -1,57 +1,61 @@
 #!/bin/bash
 
 declare -a arr=(
-				"for2.sh"
-				"tildaexpansion.sh"
-				"echo1.sh"
-				"redirection0.sh"
-				"while0.sh"
-				"for0.sh"
-				"braceexpansion.sh"
-				"redirection.sh"
-				"pipeline.sh"
-				"hostname0.sh"
-				"if9.sh"
-				"redirect.sh"
-				"while0.sh"
-				"if3.sh"
-				"arguments.sh"
-				# "expansions.sh"
-				# "for1.sh"
-				"if0.sh"
-				"case0.sh"
-				"arithmetic.sh"
-				# "if7.sh"
-				# "array.sh"
-				"while.sh"
-				"if8.sh"
-				"parameterexpansion.sh"
-				"var1.sh"
-				# "for.sh"
-				"var0.sh"
-				"until.sh"
-				"conditionals.sh"
-				"stringconcat.sh"
-				"if6.sh"
-				"if5.sh"
-				"if4.sh"
-				"if2.sh"
-				"if1.sh"
+					"arguments.sh 1 2 3"
+					"arguments.sh 1"
+					"arguments.sh"
+					"for2.sh"
+					"tildaexpansion.sh"
+					"echo1.sh"
+					"redirection0.sh"
+					"while0.sh"
+					"for0.sh"
+					"braceexpansion.sh"
+					"redirection.sh"
+					"pipeline.sh"
+					"hostname0.sh"
+					"if9.sh"
+					"redirect.sh"
+					"while0.sh"
+					"if3.sh"
+					# "expansions.sh"
+					# "for1.sh"
+					"if0.sh"
+					"case0.sh"
+					"arithmetic.sh"
+					# "if7.sh"
+					# "array.sh"
+					"while.sh"
+					"if8.sh"
+					"parameterexpansion.sh"
+					"var1.sh"
+					# "for.sh"
+					"var0.sh"
+					"until.sh"
+					"conditionals.sh"
+					"stringconcat.sh"
+					"if6.sh"
+					"if5.sh"
+					"if4.sh"
+					"if2.sh"
+					"if1.sh"
 				)
 
 mkdir -p gen
 
 do_test()
 (
-	f=$(echo "$1" | cut -f 1 -d '.')
-	node app.js tests/$1 gen/$f.cpp
+	stringarray=($1)
+	bashargs="${stringarray[@]:1}"
+	f=$(echo "${stringarray[0]}" | cut -f 1 -d '.')
+	node app.js tests/${stringarray[0]} gen/$f.cpp
 	if [ "$?" -ne 0 ]; then
 		exit -1
 	fi
 
 	g++ gen/$f.cpp -o gen/$f -g $3 -fno-exceptions -lpcre -std=c++17
 
-	out0=$(gen/$f)
+	out0=$(gen/$f $bashargs)
 	out1=$(tests/$1)
 	if [ "$out0" != "$out1" ]; then
 		# for (( i=0; i<${#out0}; i++ )); do
@@ -92,7 +96,6 @@ do_looptest()
 (
 	run0avg=0
 	run1avg=0
-	# echo $i
 	runtime=$(do_test "$1" "$2" "$3" )
 	if [ "$runtime" == "" ]; then
 		echo "$1 failed"
@@ -128,7 +131,7 @@ fi
 ## now loop through the above array
 for filename in "${arr[@]}"
 do
-	do_looptest $filename 1 "-O3"
+	do_looptest "$filename" 1 "-O3"
 	if [ $? -ne 0 ]; then
 		exit $?
 	fi
