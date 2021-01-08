@@ -47,11 +47,6 @@ done
   # echo "Creating rds (DB) server in $zone, please wait ..."
 # done
 
-# for day in Mon Tue Wed Thu Fri
-# do
- # echo "Weekday $((i++)) : $day"
-# done
-
 # FILES="file1
 # /path/to/file2
 # /etc/resolv.conf"

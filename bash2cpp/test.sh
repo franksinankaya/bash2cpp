@@ -1,6 +1,7 @@
 #!/bin/bash
 
 declare -a arr=(
+				"for2.sh"
 				"tildaexpansion.sh"
 				"echo1.sh"
 				"redirection0.sh"

@@ -57,7 +57,7 @@ class ConvertBash {
                 return leftvalue + " " + arithmeticAST.operator + " " + rightvalue
         }
     }
-    private convertArithmeticAST(arithmeticAST: any, expression: any): string {
+    private convertArithmeticAST(arithmeticAST: any, expression: any, position:any = null): string {
         if (arithmeticAST.type == "UpdateExpression") {
             let val = ""
             let identifier = ""
@@ -67,19 +67,26 @@ class ConvertBash {
             } else {
                 this.terminate(expression)
             }
+            let ret = ""
             switch (arithmeticAST.operator) {
                 case "++":
                     if (arithmeticAST.prefix)
-                        return "pre_increment(\"" + identifier + "\")"
+                        ret = "pre_increment(\"" + identifier + "\")"
                     else
-                        return "post_increment(\"" + identifier + "\")"
+                        ret = "post_increment(\"" + identifier + "\")"
+                    break;
                 case "--":
                     if (arithmeticAST.prefix)
-                        return "pre_decrement(\"" + identifier + "\")"
+                        ret = "pre_decrement(\"" + identifier + "\")"
                     else
-                        return "post_decrement(\"" + identifier + "\")"
+                        ret = "post_decrement(\"" + identifier + "\")"
+                    break;
+                default:
+                    this.terminate(expression)
             }
-            this.terminate(expression)
+            if (position && position.start > 0)
+                ret = "\" + " + ret + "+ \""
+            return ret
         }
         if (arithmeticAST.type == "BinaryExpression") {
             return this.convertArithmeticASTBinaryExpression(arithmeticAST, expression)
@@ -131,7 +138,7 @@ class ConvertBash {
         if ((command.loc.start < 0) || (command.loc.end < 0)) {
             return ""
         }
-        return this.convertArithmeticAST(command.arithmeticAST, command.expression)
+        return this.convertArithmeticAST(command.arithmeticAST, command.expression, command.loc)
     }
     private convertLogicalExpression(command: any): string {
         const [clause, thenval, elseval] = this.convertIfStatement(command, command.left, command.right)
@@ -2076,24 +2083,26 @@ class ConvertBash {
 
         const incrementstr = "\n\
         const std::string pre_increment(const std::string &variable) {\n\
-            int val = mystoi(get_env(variable)) + 1;\n\
+            int val = mystoi(get_env(variable), 0) + 1;\n\
             set_env(variable.c_str(), val);\n\
             return std::to_string(val);\n\
         }\n\
         const std::string post_increment(const std::string &variable) {\n\
-            int val = mystoi(get_env(variable)) + 1;\n\
+            int initval = mystoi(get_env(variable), 0);\n\
+            int val = initval + 1;\n\
             set_env(variable.c_str(), val);\n\
-            return variable;\n\
+            return std::to_string(initval);\n\
         }\n\
         const std::string pre_decrement(const std::string &variable) {\n\
-            int val = mystoi(get_env(variable)) - 1;\n\
+            int val = mystoi(get_env(variable), 0) - 1;\n\
             set_env(variable.c_str(), val);\n\
             return std::to_string(val);\n\
         }\n\
         const std::string post_decrement(const std::string &variable) {\n\
-            int val = mystoi(get_env(variable)) - 1;\n\
+            int initval = mystoi(get_env(variable), 0);\n\
+            int val = initval - 1;\n\
             set_env(variable.c_str(), val);\n\
-            return variable;\n\
+            return std::to_string(initval);\n\
         }\n\
         \n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
