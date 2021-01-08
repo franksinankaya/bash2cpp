@@ -1,6 +1,7 @@
 #!/bin/bash
 
 declare -a arr=(
+				"redirection0.sh"
 				"while0.sh"
 				"for0.sh"
 				"braceexpansion.sh"

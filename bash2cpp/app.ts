@@ -1483,7 +1483,16 @@ class ConvertBash {
                 ignoreRedirects = false
             let [suffix,] = command.suffix ? this.convertExpansion(command.suffix, ignoreRedirects) : ["", false];
             if ((suffix != "") && (suffix[suffix.length - 1] != "\"")) {
-                if (!command.suffix[command.suffix.length - 1].expansion)
+                let lastnonexpanded = false
+                for (let i = command.suffix.length - 1; i >= 0; i--) {
+                    if (command.suffix[i].type == "Redirect")
+                        continue
+                    if (!command.suffix[i].expansion) {
+                        lastnonexpanded = true
+                    }
+                    break;
+                }
+                if (lastnonexpanded)
                     suffix += "\""
             }
             suffix = this.trimTrailingSpaces(suffix)
