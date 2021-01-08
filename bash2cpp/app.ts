@@ -144,6 +144,9 @@ class ConvertBash {
             this.terminate(command)
     }
 
+    private replaceAll(str, find, replace) {
+        return str.replace(new RegExp(find, 'g'), replace);
+    }
     /*
      * type: 'AssignmentWord',
 	 * text: String,
@@ -203,7 +206,13 @@ class ConvertBash {
 
         const equalpos = command.text.indexOf("=")
         const variableName = command.text.substr(0, equalpos)
-        variableValue = command.text.substr(equalpos+1, command.text.length)
+        variableValue = command.text.substr(equalpos + 1, command.text.length)
+        let startindex = 0
+        if (variableValue.indexOf("~") != -1) {
+            variableValue = this.replaceAll(variableValue, "~", "\" + get_env(\"HOME\") + \"")
+            variableValue = "\"" + variableValue + "\""
+            return `set_env("${variableName}", ${variableValue})`;
+        }
 
         if ((variableValue.charAt(0) == "\"") && (variableValue.charAt(variableValue.length - 1) == "\"")) {
             variableValue = variableValue.substring(1);

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 declare -a arr=(
+				"tildaexpansion.sh"
 				"echo1.sh"
 				"redirection0.sh"
 				"while0.sh"
