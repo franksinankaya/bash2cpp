@@ -1509,7 +1509,7 @@ class ConvertBash {
             if ((suffix != "") && (suffix[suffix.length - 1] != "\"")) {
                 let lastnonexpanded = false
                 for (let i = command.suffix.length - 1; i >= 0; i--) {
-                    if (command.suffix[i].type == "Redirect")
+                    if (command.suffix[i].type == "Redirect" && issuesystem)
                         continue
                     if (!command.suffix[i].expansion) {
                         lastnonexpanded = true
