@@ -697,14 +697,10 @@ class ConvertBash {
         let text = ""
         text += "std::string " + name + "(std::initializer_list<std::string> list) {\n"
         text += "processargs(list);\n"
-        text += "std::streambuf * backup;\n"
-        text += "backup = std::cout.rdbuf();\n"
-        text += "std::stringstream   redirectStream;\n"
-        text += "scopeexitcout scope(backup, redirectStream);\n"
-        text += "std::cout.rdbuf(redirectStream.rdbuf());\n"
+        text += "scopeexitcout scope;\n"
 
         text += body + "; \n"
-        text += "return redirectStream.str();\n"
+        text += "return scope.str();\n"
         text += "}\n"
 
         return text
@@ -912,37 +908,28 @@ class ConvertBash {
                 file = this.convertCommand(redirections[index].file)
 
             let numberIo = redirections[index].numberIo ? parseInt(redirections[index].numberIo.text) : 1
-            text += "std::streambuf *backup;\n"
             if (redirections[index].op.text == ">") {
                 if (numberIo == 2) {
-                    text += "backup = std::cerr.rdbuf();\n"
-                    text += "std::ofstream file(" + file + ");\n"
-                    text += "if (file) std::cerr.rdbuf(file.rdbuf());\n"
+                    text += "scopeexitcerrfile scopefile(" + file + ");\n"
                 } else {
-                    text += "backup = std::cout.rdbuf();\n"
-                    text += "std::ofstream file(" + file + ");\n"
-                    text += "if (file) std::cout.rdbuf(file.rdbuf());\n"
+                    text += "scopeexitcoutfile scopefile(" + file + ");\n"
                 }
             }
             else if (redirections[index].op.text == ">>") {
                 if (numberIo == 2) {
-                    text += "backup = std::cerr.rdbuf();\n"
-                    text += "std::ofstream file;\n"
-                    text += "file.open(" + file + ", std::ios_base::app);\n"
-                    text += "if (file) std::cerr.rdbuf(file.rdbuf());\n"
+                    text += "scopeexitcerrfile scopefile(" + file + ", true);\n"
                 } else {
-                    text += "backup = std::cout.rdbuf();\n"
-                    text += "std::ofstream file;\n"
-                    text += "file.open(" + file + ", std::ios_base::app);\n"
-                    text += "if (file) std::cout.rdbuf(file.rdbuf());\n"
+                    text += "scopeexitcoutfile scopefile(" + file + ", true);\n"
                 }
             }
             else if (redirections[index].op.text == "<") {
+                text += "std::streambuf *backup;\n"
                 text += "backup = std::cin.rdbuf();\n"
                 text += "std::ifstream file(" + file + ");\n"
                 text += "if (file) std::cin.rdbuf(file.rdbuf());\n"
             }
             else if (redirections[index].op.text == ">&") {
+                text += "std::streambuf *backup;\n"
                 file = parseInt(redirections[index].file.text)
                 if (numberIo == 2) {
                     if (file == 1)
@@ -979,14 +966,15 @@ class ConvertBash {
         text += maintext + ";"
         if (redirections && (redirections[index].type == "Redirect")) {
             let numberIo = redirections[index].numberIo ? parseInt(redirections[index].numberIo.text) : 1
-            if ((redirections[index].op.text == ">") ||
-                (redirections[index].op.text == ">&") ||
-                (redirections[index].op.text == ">>")){
+            if (redirections[index].op.text == ">&"){
                 if (numberIo == 2) {
                     text += "std::cerr.rdbuf(backup);\n"
                 } else {
                     text += "std::cout.rdbuf(backup);\n"
                 }
+            }
+            else if ((redirections[index].op.text == ">") ||
+                (redirections[index].op.text == ">>")){
             }
             else if (redirections[index].op.text == "<") {
                 text += "std::cin.rdbuf(backup);\n"
@@ -2121,9 +2109,44 @@ class ConvertBash {
             return std::to_string(initval);\n\
         }\n\
         \n"
+
+        let scopeexitstr = 
+        "class scopeexitcerrfile{\n" +
+            "std::streambuf *m_backup;\n" +
+            "std::ofstream m_redirectStream;\n" +
+            "public:\n" +
+            "scopeexitcerrfile(const std::string &file, bool append = false) {\n" +
+            "append ? m_redirectStream = std::ofstream(file, std::ios_base::app): m_redirectStream = std::ofstream(file);\n" +
+            "m_backup = std::cerr.rdbuf();\n" +
+            "if (m_redirectStream) std::cerr.rdbuf(m_redirectStream.rdbuf());\n" +
+            "}\n" +
+            "~scopeexitcerrfile(){std::cerr.rdbuf(m_backup);}\n" +
+            "};\n" +
+        "class scopeexitcoutfile{\n" +
+            "std::streambuf *m_backup;\n" +
+            "std::ofstream m_redirectStream;\n" +
+            "public:\n" +
+            "scopeexitcoutfile(const std::string &file, bool append = false) {\n" +
+             "append ? m_redirectStream = std::ofstream(file, std::ios_base::app): m_redirectStream = std::ofstream(file);\n" +
+            "m_backup = std::cout.rdbuf();\n" +
+            "if (m_redirectStream) std::cout.rdbuf(m_redirectStream.rdbuf());\n" +
+            "}\n" +
+            "~scopeexitcoutfile(){std::cout.rdbuf(m_backup);}\n" +
+            "};\n" +
+        "class scopeexitcout{\n" +
+            "std::streambuf *m_backup;\n" +
+            "std::stringstream m_redirectStream;\n" +
+            "public:\n" +
+            "std::string str(){ return m_redirectStream.str();} \n" +
+            "scopeexitcout(){\n" +
+            "m_backup = std::cout.rdbuf();\n" +
+            "std::cout.rdbuf(m_redirectStream.rdbuf());\n" +
+            "}\n" +
+            "~scopeexitcout(){std::cout.rdbuf(m_backup); std::cout << m_redirectStream.str();}\n" +
+            "};\n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
             + charfileexists + filereadable + fileexecutable + filewritable + direxists + envCommand + execCommand + splitCommand + regexstr + echostr
-            + cdstr + readstr + incrementstr + processargsstr;
+            + cdstr + readstr + incrementstr + processargsstr + scopeexitstr;
     }
 }
 
@@ -2175,13 +2198,6 @@ try {
         "#include <fstream>\n" +
         "#include <sys/stat.h>\n" +
         converter.getSupportDefinitions() +
-        "class scopeexitcout{\n" +
-        "std::streambuf *m_backup;\n" +
-        "std::stringstream &m_redirectStream;\n" +
-        "public:\n" +
-        "scopeexitcout(std::streambuf * backup, std::stringstream &redirectStream): m_backup(backup), m_redirectStream(redirectStream) {}\n" +
-        "~scopeexitcout(){std::cout.rdbuf(m_backup); std::cout << m_redirectStream.str();}\n" +
-        "};\n" +
         converter.getPipelineDefinitions() +
         converter.getFunctionDefinitions() +
         "\n" +
