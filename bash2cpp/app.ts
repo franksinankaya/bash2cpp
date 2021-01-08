@@ -713,13 +713,12 @@ class ConvertBash {
         text += "set_env(\"@\", combinedargs);\n"
         text += "std::streambuf * backup;\n"
         text += "backup = std::cout.rdbuf();\n"
-        text += "scopeexitcout scope(backup);\n"
         text += "std::stringstream   redirectStream;\n"
+        text += "scopeexitcout scope(backup, redirectStream);\n"
         text += "std::cout.rdbuf(redirectStream.rdbuf());\n"
 
         text += body + "; \n"
-
-        text += "return redirectStream.str(); \n"
+        text += "return redirectStream.str();\n"
         text += "}\n"
 
         return text
@@ -2169,12 +2168,13 @@ try {
         converter.getSupportDefinitions() +
         "class scopeexitcout{\n" +
         "std::streambuf *m_backup;\n" +
+        "std::stringstream &m_redirectStream;\n" +
         "public:\n" +
-        "scopeexitcout(std::streambuf * backup): m_backup(backup){}\n" +
-        "~scopeexitcout(){std::cout.rdbuf(m_backup);}\n" +
+        "scopeexitcout(std::streambuf * backup, std::stringstream &redirectStream): m_backup(backup), m_redirectStream(redirectStream) {}\n" +
+        "~scopeexitcout(){std::cout.rdbuf(m_backup); std::cout << m_redirectStream.str();}\n" +
         "};\n" +
-        converter.getFunctionDefinitions() +
         converter.getPipelineDefinitions() +
+        converter.getFunctionDefinitions() +
         "\n" +
         "int main(int argc, const char *argv[]) {\n" +
         argstr + 
