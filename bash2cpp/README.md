@@ -28,6 +28,7 @@
 * dmesg -s 131072 > gen/dmesg  doesn't work
 * echo {A..Z}{0..9} does not work
 * echo 1.{1..9}
+* str+=", " doesn't work
 
 ## LOW PRIORITY
 * supports only 11 arguments
