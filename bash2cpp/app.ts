@@ -1443,9 +1443,11 @@ class ConvertBash {
                         text += nametext
                         if (suffixprocessed)
                             text += " " + suffixprocessed
-                        else {
+                        else if (!nameexpanded){
                             text += "\")"
                         }
+                        else
+                            text += ")"
                     } else {
                         if (!suffixprocessed)
                             suffixprocessed = ""
