@@ -1402,26 +1402,28 @@ class ConvertBash {
                     }
 
                     if (expanded) {
+                        if (!nameexpanded) {
+                            text += "std::string("
+                            text += "\""
+                        }
+                        else
+                            text += ""
+                        text += nametext
+
                         if (suffixprocessed) {
                             if (!nameexpanded)
                                 suffixprocessed = "\") + " + suffixprocessed
                             else
-                                suffixprocessed = ") + " + suffixprocessed
+                                suffixprocessed = " + " + suffixprocessed
                         }
-
-                        text += "std::string("
-                        if (!nameexpanded)
-                            text += "\""
-                        else
-                            text += ""
-                        text += nametext
                         if (suffixprocessed)
                             text += " " + suffixprocessed
                         else if (!nameexpanded){
                             text += "\")"
                         }
                         else
-                            text += ")"
+                            text += ""
+
                     } else {
                         if (!suffixprocessed)
                             suffixprocessed = ""
