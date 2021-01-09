@@ -2213,7 +2213,9 @@ try {
         "int main(int argc, const char *argv[]) {\n" +
         argstr + 
         parseresult +
-        ";\n}\n"
+        ";\n" +
+        "return 0;\n" +
+        "} \n"
 }
 catch (e) {
     console.log(e);
