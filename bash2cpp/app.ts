@@ -923,10 +923,7 @@ class ConvertBash {
                 }
             }
             else if (redirections[index].op.text == "<") {
-                text += "std::streambuf *backup;\n"
-                text += "backup = std::cin.rdbuf();\n"
-                text += "std::ifstream file(" + file + ");\n"
-                text += "if (file) std::cin.rdbuf(file.rdbuf());\n"
+                text += "scopeexitcinfile scopefile(" + file + ");\n"
             }
             else if (redirections[index].op.text == ">&") {
                 text += "std::streambuf *backup;\n"
@@ -977,7 +974,6 @@ class ConvertBash {
                 (redirections[index].op.text == ">>")){
             }
             else if (redirections[index].op.text == "<") {
-                text += "std::cin.rdbuf(backup);\n"
             }
             else
                 this.terminate(redirections[index])
@@ -1256,7 +1252,8 @@ class ConvertBash {
         let maintext = ""
         maintext += "while ( "
         if (command.redirections) {
-            maintext += " file && "
+            let file = this.convertCommand(command.redirections[0].file)
+            maintext += " fileexists(" + file + ") && "
         }
         maintext += clause + ") {\n"
         maintext += thenval
@@ -2122,6 +2119,17 @@ class ConvertBash {
             "if (m_redirectStream) std::cerr.rdbuf(m_redirectStream.rdbuf());\n" +
             "}\n" +
             "~scopeexitcerrfile(){std::cerr.rdbuf(m_backup);}\n" +
+            "};\n" +
+        "class scopeexitcinfile{\n" +
+            "std::streambuf *m_backup;\n" +
+            "std::ifstream m_redirectStream;\n" +
+            "public:\n" +
+            "scopeexitcinfile(const std::string &file) {\n" +
+             "m_redirectStream = std::ifstream(file);\n" +
+            "m_backup = std::cin.rdbuf();\n" +
+            "if (m_redirectStream) std::cin.rdbuf(m_redirectStream.rdbuf());\n" +
+            "}\n" +
+            "~scopeexitcinfile(){std::cin.rdbuf(m_backup);}\n" +
             "};\n" +
         "class scopeexitcoutfile{\n" +
             "std::streambuf *m_backup;\n" +
