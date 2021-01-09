@@ -9,7 +9,7 @@ class ConvertBash {
     private pipelines: any = []
 
     private escapeDoubleQuotes(str:any) {
-        return str.replace(/\\([\s\S])|(")/g, "\\$1$2"); // thanks @slevithan!
+        return str.replace(/\\([\s\S])|(")/g, "\\$1$2");
     }
 
     private terminate(command: any) {
@@ -713,6 +713,14 @@ class ConvertBash {
         return ""
     }
 
+    private escapeText(text: any): any {
+        text = text.replace(/'/g, "\\'");
+        text = text.replace(/\\/g, "\\\\");
+        text = text.replace(/\n/g, "\\n");
+        text = this.escapeDoubleQuotes(text)
+
+        return text
+    }
     /*
      * Array<ArithmeticExpansion |
 	 *				 CommandExpansion |
@@ -784,6 +792,7 @@ class ConvertBash {
             return text;
         }
         let text = command.text;
+        text = this.escapeText(text)
 
         if (text == " ")
             text = '"' + " " + '"'
@@ -1479,8 +1488,8 @@ class ConvertBash {
             if (nametext == "exec")
                 ignoreRedirects = false
             let [suffix,] = command.suffix ? this.convertExpansion(command.suffix, ignoreRedirects) : ["", false];
+            let lastnonexpanded = false
             if ((suffix != "") && (suffix[suffix.length - 1] != "\"")) {
-                let lastnonexpanded = false
                 for (let i = command.suffix.length - 1; i >= 0; i--) {
                     if (command.suffix[i].type == "Redirect" && issuesystem)
                         continue
@@ -1489,9 +1498,9 @@ class ConvertBash {
                     }
                     break;
                 }
-                if (lastnonexpanded)
-                    suffix += "\""
             }
+            if (lastnonexpanded)
+                suffix += "\""
             suffix = this.trimTrailingSpaces(suffix)
             let redirecttext = ""
             if (command.suffix && ignoreRedirects) {
