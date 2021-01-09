@@ -154,6 +154,50 @@ class ConvertBash {
     private replaceAll(str, find, replace) {
         return str.replace(new RegExp(find, 'g'), replace);
     }
+
+    private convertQuotes(expansionarr: any, expansion: any): string{
+        let stringexpression = true
+
+        if (expansionarr) {
+            for (let i = 0; i < expansionarr.length; i++) {
+                if (expansionarr[i].loc && (expansionarr[i].loc.start > 0) && (expansionarr[i].type == "ArithmeticExpansion"))
+                    stringexpression = false;
+            }
+        }
+
+        if ((expansion.charAt(0) == "'") && (expansion.charAt(expansion.length - 1) != "'")) {
+            let t = ""
+            if (stringexpression)
+                t += "\""
+            t += expansion.substring(1, expansion.length)
+            if (stringexpression)
+                t += "\""
+            expansion = t
+        }
+
+        if ((expansion.charAt(0) == "'") && (expansion.charAt(expansion.length - 1) == "'")) {
+            let t = ""
+            if (stringexpression)
+                t += "\""
+            t += expansion.substring(1, expansion.length - 1)
+            if (stringexpression)
+                t += "\""
+            expansion = t
+        }
+
+        let needsquote = expansion.charAt(0) == "\"" && (expansion.charAt(1) == " ")
+        if (needsquote && stringexpression)
+            expansion = "\"" + expansion
+
+        needsquote = (expansion.charAt(0) != "\"") && (expansion.charAt(expansion.length - 1) != "\"")
+        if (needsquote && stringexpression)
+            expansion = "\"" + expansion + "\""
+
+        if (expansion.indexOf("\"\" + ") == 0)
+            expansion = expansion.substring(5)
+
+        return expansion
+    }
     /*
      * type: 'AssignmentWord',
 	 * text: String,
@@ -169,43 +213,7 @@ class ConvertBash {
             const variableValue = text.substr(equalpos + 1, text.length)
 
             let expansion = variableValue
-            let stringexpression = true
-
-            for (let i = 0; i < command.expansion.length; i++) {
-                if ((command.expansion[i].loc.start > 0) && (command.expansion[i].type == "ArithmeticExpansion"))
-                    stringexpression = false;
-            }
-
-            if ((expansion.charAt(0) == "'") && (expansion.charAt(expansion.length - 1) != "'")) {
-                let t = ""
-                if (stringexpression)
-                    t += "\""
-                t += expansion.substring(1, expansion.length)
-                if (stringexpression)
-                    t += "\""
-                expansion = t
-            }
-
-            if ((expansion.charAt(0) == "'") && (expansion.charAt(expansion.length - 1) == "'")) {
-                let t = ""
-                if (stringexpression)
-                    t += "\""
-                t += expansion.substring(1, expansion.length - 1)
-                if (stringexpression)
-                    t += "\""
-                expansion = t
-            }
-
-            let needsquote = expansion.charAt(0) == "\"" && (expansion.charAt(1) == " ")
-            if (needsquote && stringexpression)
-                expansion = "\"" + expansion
-
-            needsquote = (expansion.charAt(0) != "\"") && (expansion.charAt(expansion.length-1) != "\"")
-            if (needsquote && stringexpression)
-                expansion = "\"" + expansion + "\""
-
-            if (expansion.indexOf("\"\" + ") == 0)
-                expansion = expansion.substring(5)
+            expansion = this.convertQuotes(command.expansion, expansion)
             return `set_env("${variableName}", ${expansion})`;
         }
 
@@ -215,23 +223,14 @@ class ConvertBash {
         const variableName = command.text.substr(0, equalpos)
         variableValue = command.text.substr(equalpos + 1, command.text.length)
         let startindex = 0
+
         if (variableValue.indexOf("~") != -1) {
             variableValue = this.replaceAll(variableValue, "~", "\" + get_env(\"HOME\") + \"")
             variableValue = "\"" + variableValue + "\""
             return `set_env("${variableName}", ${variableValue})`;
         }
 
-        if ((variableValue.charAt(0) == "\"") && (variableValue.charAt(variableValue.length - 1) == "\"")) {
-            variableValue = variableValue.substring(1);
-            variableValue = variableValue.substr(0, variableValue.length - 1);
-        }
-        if ((variableValue.charAt(0) == "'") && (variableValue.charAt(variableValue.length - 1) == "'")) {
-            variableValue = variableValue.substring(1);
-            variableValue = variableValue.substr(0, variableValue.length - 1);
-        }
-
-        if (variableValue.indexOf("\"\" + ") == 0)
-            variableValue = variableValue.substring(5)
+        variableValue = this.convertQuotes(command.expansion, variableValue)
 
         // auto-quote value if it doesn't start with quote
         if (!variableValue.startsWith('"') && !this.isNumeric(variableValue))
@@ -828,10 +827,7 @@ class ConvertBash {
                     if (i != (varray.length - 1))
                         suffix += " "
                 }
-
-                const needsquote = (suffix.charAt(0) != "\"") && (suffix.charAt(suffix.length - 1) != "\"")
-                if (needsquote)
-                    suffix = '"' + suffix + '"'
+                suffix = this.convertQuotes(varray, suffix)
             } else {
                 for (let i = 0; i < varray.length; i++) {
                     if (skipRedirects && (varray[i].type == "Redirect"))
