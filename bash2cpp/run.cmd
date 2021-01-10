@@ -9,12 +9,10 @@ REM logic.sh
 REM won't parse
 REM populate-volatile.sh
 
-REM won't compile
-REM read-only-rootfs-hook.sh
-
 IF NOT EXIST gen GOTO mkdir gen
 
 for %%x in (
+		read-only-rootfs-hook.sh
 		hostname.sh
         if.sh
 		functions
