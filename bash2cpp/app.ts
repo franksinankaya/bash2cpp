@@ -1957,7 +1957,7 @@ class ConvertBash {
             const char *userdelim = getenv(\"IFS\");\n\
             if (userdelim != NULL)\n\
             {\n\
-                delim = userdelim[0];\n\
+                delim = userdelim;\n\
             }\n\
             { \n\
                 split(elems, s, delim); \n\
