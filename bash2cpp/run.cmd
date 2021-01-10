@@ -12,6 +12,7 @@ REM populate-volatile.sh
 IF NOT EXIST gen GOTO mkdir gen
 
 for %%x in (
+		logic.sh
 		read-only-rootfs-hook.sh
 		hostname.sh
         if.sh

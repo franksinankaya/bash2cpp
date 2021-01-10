@@ -1,6 +1,7 @@
 #!/bin/bash
 
 declare -a arr=(
+					"echo2.sh"
 					#"special.sh"
 					"functions1.sh"
 					"arguments.sh 1 2 3"

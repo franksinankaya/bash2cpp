@@ -155,6 +155,14 @@ class ConvertBash {
         return str.replace(new RegExp(find, 'g'), replace);
     }
 
+    private isStringTerminated(str: any): boolean {
+        if ((str.charAt(str.length - 2) != "\\") &&
+            (str.charAt(str.length - 1) == "\"")
+        )
+            return true
+       return false
+    }
+
     private convertQuotes(expansionarr: any, expansion: any): string{
         let stringexpression = true
 
@@ -189,7 +197,7 @@ class ConvertBash {
         if (needsquote && stringexpression)
             expansion = "\"" + expansion
 
-        needsquote = (expansion.charAt(0) != "\"") && (expansion.charAt(expansion.length - 1) != "\"")
+        needsquote = (expansion.charAt(0) != "\"") && (!this.isStringTerminated(expansion))
         if (needsquote && stringexpression)
             expansion = "\"" + expansion + "\""
 

@@ -1,0 +1,1 @@
+echo "Testing \"0\""
