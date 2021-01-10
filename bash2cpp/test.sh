@@ -74,9 +74,9 @@ do_test()
 			# fi
 		# done
 		# echo ${#out0}
-		echo ${out0} > out0.txt
+		gen/$f $bashargs > out0.txt
 		# echo ${#out1}
-		echo ${out1} > out1.txt
+		tests/$1 > out1.txt
 		exit 1
 	fi
 	start=$(date +%s.%N)
