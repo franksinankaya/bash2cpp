@@ -1563,9 +1563,53 @@ class ConvertBash {
         return text;
     }
 
+    private handleParameterCase(str: any): string {
+        let text = ""
+        if ((str.length>1) && (str.indexOf("^^") == (str.length - 2))) {
+            str = str.substring(0, str.length - 2)
+            text = "get_env(\"" + str + "\")";
+            text = "upper(" + text + ")"
+        }
+        else if ((str.length > 0) && (str.indexOf("^") == (str.length - 1))) {
+            str = str.substring(0, str.length - 1)
+            text = "get_env(\"" + str + "\")";
+            text = "uppercapitalize(" + text + ")"
+        }
+        else if ((str.length > 1) && (str.indexOf(",,") == (str.length - 2))) {
+            str = str.substring(0, str.length - 2)
+            text = "get_env(\"" + str + "\")";
+            text = "lower(" + text + ")"
+        }
+        else if ((str.length > 0) && (str.indexOf(",") == (str.length - 1))) {
+            str = str.substring(0, str.length - 1)
+            text = "get_env(\"" + str + "\")";
+            text = "lowercapitalize(" + text + ")"
+        }
+        else {
+            text = "get_env(\"" + str + "\")";
+        }
+        return text
+    }
 
     public convertParameterExpansion(command: any): string {
         if (command.loc.start >= 0 && command.loc.end > 0) {
+            if ((command.op) && (command.op == "caseChange")) {
+                if (command.globally == true) {
+                    let text = ""
+                    if (command.case == "upper")
+                        text += "upper(get_env(\"" + command.parameter + "\"))"
+                    else
+                        text += "lower(get_env(\"" + command.parameter + "\"))"
+                    return text
+                } else {
+                    let text = ""
+                    if (command.case == "upper")
+                        text += "uppercapitalize(get_env(\"" + command.parameter + "\"))"
+                    else
+                        text += "lowercapitalize(get_env(\"" + command.parameter + "\"))"
+                    return text
+                }
+            }
             if ((command.op) && (command.op == "substring")) {
                 if (command.length) {
                     let length = command.length
@@ -1587,7 +1631,7 @@ class ConvertBash {
                     return "get_env(\"" + command.parameter + "\").substr(" + offset + ",  std::string::npos)";
                 }
             }
-            return "get_env(\"" + command.parameter + "\")";
+            return this.handleParameterCase(command.parameter)
         }
         else {
             return '';
@@ -2088,7 +2132,7 @@ class ConvertBash {
         text += "if (i != (list.size() - 1)) combinedargs += \" \";\n"
         text += "i++;\n"
         text += "}\n"
-        text += "for (int i = (int)list.size(); i < 11; i++) {\n"
+        text += "for (int i = (int)list.size() + 1; i < 11; i++) {\n"
         text += "set_env(std::to_string(i).c_str(), \" \");\n"
         text += "}\n"
         text += "if (combinedargs.size() == 0) combinedargs = \" \";\n"
@@ -2166,9 +2210,30 @@ class ConvertBash {
             "}\n" +
             "~scopeexitcout(){std::cout.rdbuf(m_backup); std::cout << m_redirectStream.str();}\n" +
             "};\n"
+
+        let upperstr = "std::string upper(std::string str)\n" +
+            "{\n" +
+            "std::transform(str.begin(), str.end(), str.begin(), ::toupper);\n" +
+            "return str;\n" +
+            "}\n"
+        let lowerstr = "std::string lower(std::string str)\n" +
+            "{\n" +
+            "std::transform(str.begin(), str.end(), str.begin(), ::tolower);\n" +
+            "return str;\n" +
+            "}\n"
+        let uppercapitalize = "std::string uppercapitalize(std::string str)\n" +
+            "{\n" +
+            "str[0] = toupper(str[0]);\n" +
+            "return str;\n" +
+            "}\n"
+        let lowercapitalize = "std::string lowercapitalize(std::string str)\n" +
+            "{\n" +
+            "str[0] = tolower(str[0]);\n" +
+            "return str;\n" +
+            "}\n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
             + charfileexists + filereadable + fileexecutable + filewritable + direxists + envCommand + execCommand + splitCommand + regexstr + echostr
-            + cdstr + readstr + incrementstr + processargsstr + scopeexitstr;
+            + cdstr + readstr + incrementstr + processargsstr + scopeexitstr + upperstr + lowerstr + uppercapitalize + lowercapitalize;
     }
 }
 
