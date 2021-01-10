@@ -173,26 +173,6 @@ class ConvertBash {
             }
         }
 
-        if ((expansion.charAt(0) == "'") && (expansion.charAt(expansion.length - 1) != "'")) {
-            let t = ""
-            if (stringexpression)
-                t += "\""
-            t += expansion.substring(1, expansion.length)
-            if (stringexpression)
-                t += "\""
-            expansion = t
-        }
-
-        if ((expansion.charAt(0) == "'") && (expansion.charAt(expansion.length - 1) == "'")) {
-            let t = ""
-            if (stringexpression)
-                t += "\""
-            t += expansion.substring(1, expansion.length - 1)
-            if (stringexpression)
-                t += "\""
-            expansion = t
-        }
-
         let needsquote = expansion.charAt(0) == "\"" && (expansion.charAt(1) == " ")
         if (needsquote && stringexpression)
             expansion = "\"" + expansion
@@ -759,7 +739,7 @@ class ConvertBash {
                         strbegin = text.substring(0, command.expansion[i].loc.start);
                         strend = text.substring(command.expansion[i].loc.end + 1, text.length);
 
-                        if ((strend != "") && (strend != "\"") && (strend != "'") && (strend.charAt(strend.length - 1) != "\"") && (strend.charAt(strend.length - 1) != "'")) {
+                        if ((strend != "") && (strend != "\"") && (strend.charAt(strend.length - 1) != "\"")) {
                             if ((curexpansions + 1) == numexpansions)
                                 text += "\""
                         }
@@ -784,12 +764,12 @@ class ConvertBash {
                             plus = ""
                         }
 
-                        if ((strbegin != "") && ((strbegin != "\"") && (strbegin != "'")))
+                        if ((strbegin != "") && ((strbegin != "\"")))
                             text = strbegin + strquotes + plus + expansion
                         else
                             text = expansion
 
-                        if ((strend != "") && ((strend != "\"") && (strend != "'"))) {
+                        if ((strend != "") && ((strend != "\""))) {
                             text += plus + strquotes;
                             text += strend;
                         }
@@ -1940,6 +1920,7 @@ class ConvertBash {
             // Vector of string to save tokens  \n\
             size_t pos = 0; \n\
             size_t prev = 0; \n\
+            if (str.front() == '\\\'') prev++;\n\
                                                 \n\
             while ((pos = str.find_first_of(delimiter, prev)) != std::string::npos) {\n\
                 if (pos > prev)\n\
@@ -1947,7 +1928,9 @@ class ConvertBash {
                 prev = pos+1;\n\
             }\n\
             if (prev < str.length()){\n\
-                tokens.push_back(str.substr(prev, std::string::npos));\n\
+                size_t end = str.length() - prev;\n\
+                if (str.back() == '\\\'') end--;\n\
+                tokens.push_back(str.substr(prev, end));\n\
             }\n\
         }\n\
         \n\

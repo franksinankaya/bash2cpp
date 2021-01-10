@@ -3,7 +3,7 @@
 declare -a arr=(
 					"lower0.sh"
 					"upper0.sh"
-					#"upper.sh"
+					# "upper.sh"
 					#"substring.sh"
 					"echo2.sh"
 					#"special.sh"
