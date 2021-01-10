@@ -20,11 +20,11 @@ bash2cpp is not a complete translator but does a good job for simple scripts.
 * mkdir -p gen
 * node app.js test.sh gen/test.cpp
 * optional (beautify code)
-** astyle -q -n gen/%test.cpp
+	* astyle -q -n gen/%test.cpp
 * if you have WSL
-** wsl g++ gen/test.cpp -o gen/test -lpcre -std=c++17 -g 
+	* wsl g++ gen/test.cpp -o gen/test -lpcre -std=c++17 -g 
 * if you are on linux
-** g++ gen/test.cpp -o gen/test -lpcre -std=c++17 -g
+	* g++ gen/test.cpp -o gen/test -lpcre -std=c++17 -g
 
 # BUILD TESTS
 * run.cmd
