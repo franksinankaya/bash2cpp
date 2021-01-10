@@ -1,7 +1,10 @@
+var="sub_string_1_2_3"
+echo "$var"
 if [[ $var == *sub_string* ]]; then
     printf '%s\n' "sub_string is in var."
 fi
 
+var="ub_string_1_2_3"
 # Inverse (substring not in string).
 if [[ $var != *sub_string* ]]; then
     printf '%s\n' "sub_string is not in var."

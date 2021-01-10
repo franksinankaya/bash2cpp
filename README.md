@@ -61,6 +61,7 @@ Review missing functionality list.
 * str+=", " doesn't work
 * doesn't handle special characters well
 * has problems with cat << __EOF__ .. __EOF__
+* regex string match in substring.sh does not work
 
 ## LOW PRIORITY
 * supports only 11 arguments
