@@ -31,6 +31,7 @@ bash2cpp is not a complete translator but does a good job for simple scripts.
 run0 uses linux native binary
 run1 uses bash script
 
+<pre>
 lower0.sh: run0 = 0.0140154361725 run1 = 0.0182049274445 diff=-0.004189491272 percent=-29.8919792466
 upper0.sh: run0 = 0.012749671936 run1 = 0.0150246620178 diff=-0.0022749900818 percent=-17.8435185879
 echo2.sh: run0 = 0.0164489746094 run1 = 0.0165512561798 diff=-0.0001022815704 percent=-0.621811224279
@@ -68,7 +69,7 @@ if5.sh: run0 = 0.0270199775696 run1 = 0.017284154892 diff=0.0097358226776 percen
 if4.sh: run0 = 0.0146927833557 run1 = 0.0172016620636 diff=-0.0025088787079 percent=-17.0755849805
 if2.sh: run0 = 0.021769285202 run1 = 0.0248246192932 diff=-0.0030553340912 percent=-14.0350685052
 if1.sh: run0 = 0.0122225284576 run1 = 0.0169756412506 diff=-0.004753112793 percent=-38.8881303037
-
+</pre>
 
 # BUILD TESTS
 * run.cmd
