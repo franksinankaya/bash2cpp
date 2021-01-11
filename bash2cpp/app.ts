@@ -1725,18 +1725,16 @@ class ConvertBash {
 
     public getSupportDefinitions(): string {
         const fileexists = "\n\
-        const int fileexists(const std::string &file) {          \n\
-            struct stat buf;                        \n\
-            return (stat(file.c_str(), &buf) == 0);        \n\
+        const int fileexists(const std::string &file) {\n\
+            return std::filesystem::exists(file);        \n\
         }\n\
         std::ifstream::pos_type filesize(const char* filename)\n\
         {\n\
             std::ifstream in (filename, std::ifstream::ate | std::ifstream::binary);\n\
             return in.tellg();\n\
         }\n\
-        const int fileexists_sizenonzero(const std::string &file) {          \n\
-            struct stat buf;                        \n\
-            if (stat(file.c_str(), &buf) == 0){        \n\
+        const int fileexists_sizenonzero(const std::string &file) {\n\
+            if (fileexists(file)){        \n\
                 return filesize(file.c_str()) != 0;\n\
             }\n\
             return 0;\n\
@@ -1744,63 +1742,52 @@ class ConvertBash {
 
         const regularfileexists = "\n\
         const int regularfileexists(const std::string &file) {          \n\
-            struct stat buf;                        \n\
-            return (stat(file.c_str(), &buf) == 0) && S_ISREG(buf.st_mode);        \n\
+            return fileexists(file) && std::filesystem::is_regular_file(std::filesystem::status(file));        \n\
         }\n"
 
         const pipefileexists = "\n\
         const int pipefileexists(const std::string &file) {          \n\
-            struct stat buf;                        \n\
-            return (stat(file.c_str(), &buf) == 0) && (buf.st_mode & S_IFIFO);        \n\
+            return fileexists(file) && std::filesystem::is_fifo(std::filesystem::status(file));        \n\
         }\n"
 
         const linkfileexists = "\n\
         const int linkfileexists(const std::string &file) {          \n\
-            struct stat buf;                        \n\
-            return (stat(file.c_str(), &buf) == 0) && S_ISLNK(buf.st_mode);        \n\
+            return fileexists(file) && std::filesystem::is_symlink(std::filesystem::status(file));        \n\
         }\n"
 
         const socketfileexists = "\n\
         const int socketfileexists(const std::string &file) {          \n\
-            struct stat buf;                        \n\
-            return (stat(file.c_str(), &buf) == 0) && S_ISSOCK(buf.st_mode);        \n\
+            return fileexists(file) && std::filesystem::is_socket(std::filesystem::status(file));        \n\
         }\n"
 
         const blockfileexists = "\n\
         const int blockfileexists(const std::string &file) {          \n\
-            struct stat buf;                        \n\
-            return (stat(file.c_str(), &buf) == 0) && S_ISBLK(buf.st_mode);        \n\
+            return fileexists(file) && std::filesystem::is_block_file(std::filesystem::status(file));        \n\
         }\n"
 
         const charfileexists = "\n\
         const int charfileexists(const std::string &file) {          \n\
-            struct stat buf;                        \n\
-            return (stat(file.c_str(), &buf) == 0) && S_ISCHR(buf.st_mode);        \n\
+            return fileexists(file) && std::filesystem::is_character_file(std::filesystem::status(file));        \n\
         }\n"
 
         const fileexecutable = "\n\
         const int fileexecutable(const std::string &file) {          \n\
-            struct stat buf;                        \n\
-            return (stat(file.c_str(), &buf) == 0) &&  (buf.st_mode & S_IXUSR);        \n\
+            return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_exec)!= std::filesystem::perms::none);        \n\
         }\n"
 
         const filewritable = "\n\
         const int filewritable(const std::string &file) {          \n\
-            struct stat buf;                        \n\
-            return (stat(file.c_str(), &buf) == 0) &&  (buf.st_mode & S_IWUSR);        \n\
+            return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_write)!= std::filesystem::perms::none);        \n\
         }\n"
 
         const filereadable = "\n\
         const int filereadable(const std::string &file) {          \n\
-            struct stat buf;                        \n\
-            return (stat(file.c_str(), &buf) == 0) &&  (buf.st_mode & S_IRUSR);        \n\
+            return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_read)!= std::filesystem::perms::none);        \n\
         }\n"
 
         const direxists = "\n\
         const int direxists(const std::string &file) {                                   \n\
-                                                                            \n\
-            struct stat buf;                                                \n\
-            return (stat(file.c_str(), &buf) == 0) && S_ISDIR(buf.st_mode);         \n\
+            return fileexists(file) && std::filesystem::is_directory(std::filesystem::status(file));        \n\
         }\n"
 
         const envCommand = "\n\
@@ -2266,7 +2253,6 @@ try {
         "#include <pcre.h>\n" +
         "#include <filesystem>\n" +
         "#include <fstream>\n" +
-        "#include <sys/stat.h>\n" +
         converter.getSupportDefinitions() +
         converter.getPipelineDefinitions() +
         converter.getFunctionDefinitions() +
