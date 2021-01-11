@@ -7,6 +7,13 @@ class ConvertBash {
     private functiondefs: any = ""
     private functionnames: any = []
     private pipelines: any = []
+    private lines: any
+    private currentrowstart: any
+    private currentrowend: any
+
+    public setLines(str: any) {
+        this.lines = str
+    }
 
     private escapeDoubleQuotes(str:any) {
         return str.replace(/\\([\s\S])|(")/g, "\\$1$2");
@@ -163,29 +170,85 @@ class ConvertBash {
        return false
     }
 
+    private singleQuoteBalanced(expansionarr: any, expansion: any): boolean {
+        if ((expansion.indexOf("'") == 0) && ("'" == expansion.substr(expansion.length - 1)))
+            return true;
+
+        return false
+    }
+
     private convertQuotes(expansionarr: any, expansion: any): string{
         let stringexpression = true
+        let stringtermination = true
+        let singlequotebalanced = false /*this.singleQuoteBalanced(expansionarr, expansion)*/
+
+        let singlquotecount = (expansion.match(/'/g) || []).length;
 
         if (expansionarr) {
             for (let i = 0; i < expansionarr.length; i++) {
-                if (expansionarr[i].loc && (expansionarr[i].loc.start > 0) && (expansionarr[i].type == "ArithmeticExpansion"))
-                    stringexpression = false;
+                if (expansionarr[i].loc && (expansionarr[i].loc.start < 0))
+                    continue
+
+                stringexpression = false;
+
+                if (expansionarr[i].loc && (expansionarr[i].loc.start >= 0))
+                    stringtermination = false
+            }
+        }
+        if (expansion.indexOf("\\\"\" + ") == 0)
+            expansion = expansion.substring(6)
+        else if (expansion.indexOf("\\\"") == 0) {
+            expansion = expansion.substring(2)
+            expansion = "\"" + expansion
+        }
+        else if (expansion.indexOf("\" + ") == 0)
+            expansion = expansion.substring(4)
+        else if (expansion.charAt(0) == "\"" && (expansion.charAt(1) == " ") && stringexpression)
+            expansion = "\"" + expansion
+        else if (singlequotebalanced){
+            expansion = expansion.substring(1)
+            expansion = "\"" + expansion
+        }
+        else if ((expansion.charAt(0) != "\"") && (!this.isStringTerminated(expansion)) && stringexpression) {
+            expansion = "\"" + expansion
+            if (stringtermination) expansion = expansion + "\""
+        }
+        else if ((expansion.charAt(0) == "\"") && (expansion.length == 1) && stringexpression) {
+            expansion = expansion + "\""
+        }
+        else if (expansion.indexOf("\"\" + ") == 0)
+            expansion = expansion.substring(5)
+        else if (expansion.indexOf("\"'") == 0)
+            expansion = expansion.substring(2)
+
+        if (expansion.length > 1) {
+            if ("\\\"" == expansion.substr(expansion.length - 2))
+                expansion = expansion.substring(0, expansion.length - 2)
+            else if ("\\\'" == expansion.substr(expansion.length - 2))
+                expansion = expansion.substring(0, expansion.length - 2)
+            else if ("+ \"" == expansion.substr(expansion.length - 3))
+                expansion = expansion.substring(0, expansion.length - 3)
+            else if (("'\"" == expansion.substr(expansion.length - 2)) && (singlquotecount == 2) && singlequotebalanced) 
+                expansion = expansion.substring(0, expansion.length - 2)
+            else if (singlequotebalanced) {
+                expansion = expansion.substring(0, expansion.length - 1)
+                expansion = expansion + "\""
             }
         }
 
-        let needsquote = expansion.charAt(0) == "\"" && (expansion.charAt(1) == " ")
-        if (needsquote && stringexpression)
-            expansion = "\"" + expansion
-
-        needsquote = (expansion.charAt(0) != "\"") && (!this.isStringTerminated(expansion))
-        if (needsquote && stringexpression)
-            expansion = "\"" + expansion + "\""
-
-        if (expansion.indexOf("\"\" + ") == 0)
-            expansion = expansion.substring(5)
-
         return expansion
     }
+
+    private validExpansion(command: any): boolean {
+        if (!command.expansion)
+            return false;
+        for (let i = 0; i < command.expansion.length; i++) {
+            if (command.expansion[i].loc.start > 0)
+                return true;
+        }
+        return false
+    }
+
     /*
      * type: 'AssignmentWord',
 	 * text: String,
@@ -194,11 +257,19 @@ class ConvertBash {
 					 ParameterExpansion>
      */
     private convertAssignment(command: any): string {
-        if (command.expansion) {
+        if (this.validExpansion(command)) {
             const text = this.convertWord(command)
             const equalpos = text.indexOf("=")
             const variableName = text.substr(0, equalpos)
-            const variableValue = text.substr(equalpos + 1, text.length)
+            let variableValue = text.substr(equalpos + 1, text.length)
+            if (variableValue.indexOf("\\\"") == 0) {
+                variableValue = variableValue.substr(2)
+                variableValue = "\"" + variableValue
+            }
+            else if (variableValue.indexOf("\\\'") == 0) {
+                variableValue = variableValue.substr(2)
+                variableValue = "\'" + variableValue
+            }
 
             let expansion = variableValue
             expansion = this.convertQuotes(command.expansion, expansion)
@@ -682,6 +753,9 @@ class ConvertBash {
 
     private convertOneFunction(name: any, body: any): string {
         let text = ""
+        if (name[0] == '"' && name[name.length - 1] == '"') {
+            name = name.substring(1, name.length - 2)
+        }
         text += "std::string " + name + "(std::initializer_list<std::string> list) {\n"
         text += "processargs(list);\n"
         text += "scopeexitcout scope;\n"
@@ -701,10 +775,27 @@ class ConvertBash {
     }
 
     private escapeText(text: any): any {
-        text = text.replace(/'/g, "\\'");
         text = text.replace(/\\/g, "\\\\");
+        text = text.replace(/'/g, "\\'");
         text = text.replace(/\n/g, "\\n");
         text = this.escapeDoubleQuotes(text)
+        text = text.replace(/\?/g, "\\?");
+        text = text.replace(/\f/g, "\\f");
+        text = text.replace(/\r/g, "\\r");
+        text = text.replace(/\t/g, "\\t");
+        text = text.replace(/\v/g, "\\v");
+
+        return text
+    }
+
+    private escapeSingleQuotes(text: any): any {
+        text = text.replace("\\?", "?");
+        text = text.replace(/\\/g, "\\\\");
+        text = text.replace(/\n/g, "\\n");
+        text = text.replace(/\f/g, "\\f");
+        text = text.replace(/\r/g, "\\r");
+        text = text.replace(/\t/g, "\\t");
+        text = text.replace(/\v/g, "\\v");
 
         return text
     }
@@ -749,12 +840,74 @@ class ConvertBash {
                 }
             }
 
+            let nonexpansionchanges = []
+            let nonexpansionoffsets = []
+            let nonexpansionlens = []
+            let nonexpansions = []
+            let previousstart = 0
+            for (let i = 0; i < command.expansion.length; i++) {
+                let start = command.expansion[i].loc.start
+                let end = command.expansion[i].loc.end
+
+                if (command.expansion[i].loc.start < 0) {
+                    continue
+                }
+
+                let t = text.substr(previousstart, start - previousstart)
+                let est = this.escapeText(t)
+
+                if ((previousstart == 0) && (t == "\"")) {
+                    previousstart = end + 1
+                    continue
+                }
+                if (t == "") {
+                    previousstart = end + 1
+                    continue
+                }
+
+                nonexpansionoffsets.push(previousstart)
+                nonexpansionchanges.push(est.length - t.length)
+                nonexpansionlens.push(start - previousstart)
+                nonexpansions.push(est)
+
+                previousstart = end + 1
+            }
+            let t = text.substr(previousstart, text.length - previousstart)
+            let est = this.escapeText(t)
+
+            if ((t != "\"") && (t != "")) {
+                nonexpansionoffsets.push(previousstart)
+                nonexpansionchanges.push(est.length - t.length)
+                nonexpansionlens.push(text.length - previousstart)
+                nonexpansions.push(est)
+            }
+
+            let expansionstarts = []
+            let expansionends = []
+            for (let i = 0; i < command.expansion.length; i++) {
+                let increments = 0
+                for (let j = 0; j < nonexpansionoffsets.length; j++) {
+                    if (nonexpansionoffsets[j] < command.expansion[i].loc.start)
+                        increments += nonexpansionchanges[j]
+                }
+                expansionstarts.push(command.expansion[i].loc.start + increments)
+                expansionends.push(command.expansion[i].loc.end + increments)
+            }
+
+            for (let i = nonexpansionoffsets.length - 1; i >= 0; i--) {
+                let p = text.substr(0, nonexpansionoffsets[i])
+                let exp = nonexpansions[i]
+                let e = text.substr(nonexpansionoffsets[i] + nonexpansionlens[i])
+                let offset = nonexpansionoffsets[i]
+                text = p + exp + e
+            }
+
             for (let i = command.expansion.length - 1; i >= 0; i--) {
                 if (command.expansion[i]) {
                     const expansion = this.convertCommand(command.expansion[i]);
                     if (expansion != "") {
-                        strbegin = text.substring(0, command.expansion[i].loc.start);
-                        strend = text.substring(command.expansion[i].loc.end + 1, text.length);
+                        strbegin = text.substring(0, expansionstarts[i]);
+                        strend = text.substring(expansionends[i] + 1, text.length);
 
                         let strquotes = "\""
                         let plus = " + "
@@ -762,6 +915,17 @@ class ConvertBash {
                         if (command.expansion[i].type == "ArithmeticExpansion") {
                             strquotes = ""
                             plus = ""
+                        }
+
+
+                        // remove "$val" or '$val'
+                        if ((strbegin.indexOf("\\\"") == (strbegin.length - 2)) && (strend.indexOf("\\\"") == (0))) {
+                            strbegin = strbegin.substring(0, strbegin.length - 2)
+                            strend = strend.substring(2)
+                        }
+                        else if ((strbegin.indexOf("\\\'") == (strbegin.length - 2)) && (strend.indexOf("\\\'") == (0))) {
+                            strbegin = strbegin.substring(0, strbegin.length - 2)
+                            strend = strend.substring(2)
                         }
 
                         if ((strbegin != "") && ((strbegin != "\"")))
@@ -776,6 +940,13 @@ class ConvertBash {
                     }
                 }
             }
+
+            text = this.convertQuotes(command.expansion, text)
+
+            if (nonexpansionoffsets[nonexpansionoffsets.length - 1] > command.expansion[command.expansion.length - 1].loc.start)
+                if (nonexpansions[nonexpansionoffsets.length - 1] && (nonexpansions[nonexpansionoffsets.length - 1] != "\\\""))
+                    if (numexpansions && !this.isStringTerminated(text))
+                        text += "\""
             return text;
         }
         let text = command.text;
@@ -794,7 +965,7 @@ class ConvertBash {
         return text;
     }
 
-    private convertExpansion(varray: any, skipRedirects: any): [string, boolean] {
+    private convertExpansion(varray: any, skipRedirects: any, currentline:any): [string, boolean] {
         let suffix = '';
 
         if (varray) {
@@ -811,11 +982,17 @@ class ConvertBash {
                 for (let i = 0; i < varray.length; i++) {
                     if (skipRedirects && (varray[i].type == "Redirect"))
                         continue
-                    suffix += this.convertCommand(varray[i])
+
+                    let q0 = varray[i].loc ? currentline[varray[i].loc.start.col - 1] : ""
+                    let q1 = varray[i].loc ? currentline[varray[i].loc.end.col - 1] :""
+                    let t = this.convertCommand(varray[i])
+                    if ((q0 == '\'') && (q1 == '\''))
+                        t = '\'' + this.escapeSingleQuotes(t) + '\''
+                    suffix += t
                     if (i != (varray.length - 1))
                         suffix += " "
                 }
-                suffix = this.convertQuotes(varray, suffix)
+                suffix = this.convertQuotes(varray.expansion, suffix)
             } else {
                 for (let i = 0; i < varray.length; i++) {
                     if (skipRedirects && (varray[i].type == "Redirect"))
@@ -825,6 +1002,7 @@ class ConvertBash {
                         if (i > 0) {
                             if (!expansionIndex[i - 1])
                                 suffix += '"'
+                            suffix += " + std::string(\" \")"
                             suffix += ' + '
                         }
                         const start0 = varray[i].expansion[0].loc.start
@@ -845,11 +1023,13 @@ class ConvertBash {
                             }
                         }
                         suffix += this.convertCommand(varray[i])
-                        if (i != (varray.length - 1))
+                        if ((i != (varray.length - 1)) && (!varray[i + 1].expansion))
                             suffix +=  " "
                     }
                 }
             }
+            if (suffix.indexOf("\"\\\"\" + ") == 0)
+                suffix = suffix.substring(7)
             return [suffix, hasExpansion]
         } else {
             this.terminate(varray)
@@ -1284,6 +1464,9 @@ class ConvertBash {
 
     public handleCommands(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any, inbound: any) {
         let nametext = this.convertCommand(name)
+        if (nametext[0] == '"' && nametext[nametext.length - 1] == '"') {
+            nametext = nametext.substring(1, nametext.length - 2)
+         }
         let nameexpanded = false
         if (name.expansion && name.expansion[0].loc.start >= 0) {
             nameexpanded = true
@@ -1307,6 +1490,7 @@ class ConvertBash {
                 return name.text + "({" + text + "})"
             }
         }
+
         switch (name.text) {
             case 'exit':
                 {
@@ -1330,6 +1514,9 @@ class ConvertBash {
                 if (suffixarray && suffixarray.length === 1 && suffixarray[0].text === '-e') {
                     console.log('skipping "set -e"');
                     return '';
+                } else if (suffixarray && suffixarray.length === 1 && suffixarray[0].text === '-v') {
+                    console.log('skipping "set -v"');
+                    return '';
                 } else {
                     return `${name.text}${suffixprocessed}`;
                 }
@@ -1338,6 +1525,9 @@ class ConvertBash {
             case 'echo':
                 {
                     let text = ""
+                    if ((suffixprocessed.substring(0, 2) == "\"'") && (suffixprocessed.substring(suffixprocessed.length - 2, suffixprocessed.length) == "'\"")) {
+                        suffixprocessed = '"' + suffixprocessed.substring(2, suffixprocessed.length - 2) + '"'
+                    }
 
                     if (issuesystem) {
                         text += "echo("
@@ -1438,10 +1628,11 @@ class ConvertBash {
                     }
 
                     if (issuesystem) {
-                        if (inbound)
-                            text += "," + inbound + ")"
-                        else
-                            text += ")"
+                        let quoteparams = false
+                        if ((nametext == "printf") || (nametext == "echo"))
+                            quoteparams = true
+
+                        text += "," + inbound + ", " + quoteparams + ")"
                     }
 
                     return text
@@ -1462,7 +1653,14 @@ class ConvertBash {
         return suffix
     }
 
-    public convertExecCommand(command: any, issuesystem: any = true, handlecommands: any = true, inbound = false ): string {
+    public convertExecCommand(command: any, issuesystem: any = true, handlecommands: any = true, inbound = false, coordinate = []): string {
+        let currentline = ""
+        let currentstr = ""
+        if (coordinate.length > 0) {
+            currentline = this.lines[coordinate[0].row - 1]
+        } else {
+            currentline = this.lines[this.currentrowstart.row - 1]
+        }
         if (command.prefix && command.prefix.length && (!command.name || !command.name.text)) {
             return command.prefix.map(c => this.convertCommand(c)).join(';\n');
         }
@@ -1471,7 +1669,7 @@ class ConvertBash {
             let ignoreRedirects = issuesystem
             if (nametext == "exec")
                 ignoreRedirects = false
-            let [suffix,] = command.suffix ? this.convertExpansion(command.suffix, ignoreRedirects) : ["", false];
+            let [suffix,] = command.suffix ? this.convertExpansion(command.suffix, ignoreRedirects, currentline) : ["", false];
             let lastnonexpanded = false
             if ((suffix != "") && (suffix[suffix.length - 1] != "\"")) {
                 for (let i = command.suffix.length - 1; i >= 0; i--) {
@@ -1516,10 +1714,10 @@ class ConvertBash {
         let text = ""
         let currentlength = this.pipelines.length
         for (let v = 0; v < this.pipelines.length; v++) {
-            if (this.pipelines[v] == command)
+            if (this.pipelines[v][0] == command)
                 return "pipeline" + v.toString() + "()"
         }
-        this.pipelines.push(command)
+        this.pipelines.push([command, this.currentrowstart, this.currentrowend])
         return "pipeline" + currentlength.toString() + "()"
     }
 
@@ -1619,7 +1817,10 @@ class ConvertBash {
     }
 
     public convertCommand(command: any): string {
-
+        if (command.loc && command.loc.start && command.loc.start.row) {
+            this.currentrowstart = command.loc.start
+            this.currentrowend = command.loc.end
+        }
         switch (command.type) {
             case 'LogicalExpression':
                 return this.convertLogicalExpression(command);
@@ -1677,7 +1878,7 @@ class ConvertBash {
 
                 text += "std::string " + name + "() {\n"
 
-                for (let c = 0; c < this.pipelines[v].commands.length; c++) {
+                for (let c = 0; c < this.pipelines[v][0].commands.length; c++) {
                     let backupcin = "backupin" + c.toString()
                     let backupcout = "backupout" + c.toString()
                     let redirectc = "redirectStream" + c.toString()
@@ -1697,10 +1898,11 @@ class ConvertBash {
                     //if (this.pipelines[v].commands.length != 2)
                     //    this.terminate(this.pipelines[v])
 
+                    let coordinate = [this.pipelines[v][1], this.pipelines[v][2]]
                     if (c == 0)
-                        text += this.convertExecCommand(this.pipelines[v].commands[c]) + ";\n"
+                        text += this.convertExecCommand(this.pipelines[v][0].commands[c], true, true, false,coordinate) + ";\n"
                     else
-                        text += this.convertExecCommand(this.pipelines[v].commands[c], true, true, true) + ";\n"
+                        text += this.convertExecCommand(this.pipelines[v][0].commands[c], true, true, true, coordinate) + ";\n"
                     text += "std::cout.rdbuf(" + backupcout + ");\n\n"
                     text += "std::cin.rdbuf(" + backupcin + ");\n\n"
                     text += "\n"
@@ -1713,7 +1915,7 @@ class ConvertBash {
                     // text += "std::cout.rdbuf(redirectOutStream.rdbuf());\n"
                 }
                 text += "\n"
-                text += "return redirectStream" + (this.pipelines[v].commands.length - 1).toString() + ".str(); \n"
+                text += "return redirectStream" + (this.pipelines[v][0].commands.length - 1).toString() + ".str(); \n"
                 text += "}\n"
                 text += "\n"
             }
@@ -1838,10 +2040,16 @@ class ConvertBash {
         }\n"
 
         const execCommand = "\n\
-        void execcommand(const std::string &cmd, int& exitstatus, std::string &result, int direction = 0, bool stdout = true) \n\
+        void execcommand(const std::string &cmd, int& exitstatus, std::string &result, int direction = 0, bool stdout = true, bool quoteparams=false) \n\
         { \n\
             exitstatus = 0; \n\
-            auto pPipe = ::popen(cmd.c_str(), !direction ? \"r\": \"w\"); \n\
+            std::string cmd_ = cmd;\n\
+            size_t offset = cmd_.find(\" \");\n\
+            if (offset !=std::string::npos) {\n\
+                if (quoteparams)\n\
+                    cmd_ = cmd_.substr(0, offset) + \" \\\"\" + cmd_.substr(offset + 1, std::string::npos) + \"\\\"\";\n\
+            }\n\
+            auto pPipe = ::popen(cmd_.c_str(), !direction ? \"r\": \"w\"); \n\
             if (pPipe == nullptr) { \n\
                 return;\n\
             }\n\
@@ -1885,10 +2093,10 @@ class ConvertBash {
             return exitstatus == 0; \n\
         }\n\
         \n\
-        const std::string exec(const std::string &cmd, int direction = 0) {\n\
+        const std::string exec(const std::string &cmd, int direction = 0, bool quoteparams = false) {\n\
             int exitstatus; \n\
             std::string result;\n\
-            execcommand(cmd, exitstatus, result, direction, true);\n\
+            execcommand(cmd, exitstatus, result, direction, true, quoteparams);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
         }\n\
@@ -2208,7 +2416,7 @@ class ConvertBash {
 }
 
 const parse = require('bash-parser');
-const ast = parse(file, { mode: 'bash' });
+const ast = parse(file, { mode: 'bash' ,insertLOC: true });
 
 const converter = new ConvertBash();
 
@@ -2220,6 +2428,9 @@ process.on('exit', function (code) {
 
 let str = ""
 try {
+    var textByLine = file.split("\n")
+
+    converter.setLines(textByLine)
 
     const parseresult = ast.commands
         .map(c => converter.convertCommand(c))

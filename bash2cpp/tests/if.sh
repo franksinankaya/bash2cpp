@@ -1,3 +1,10 @@
+if [ -z ${Var+x} ]; 
+then 
+  echo "CHECK 2: variable 'Var' is unset"; 
+else 
+  echo "CHECK 2: variable 'Var' is set, its content is '$Var'"; 
+fi
+
 if LOGPATH=$(which logrotate); then
 	$LOGPATH -f /etc/logrotate-dmesg.conf
 else
@@ -7,13 +14,6 @@ fi
 
 if [ -z "$HOSTNAME" -o "$HOSTNAME" = "(none)" -o ! -z "`echo $HOSTNAME | sed -n '/^[0-9]*\.[0-9].*/p'`" ] ; then
     echo "hello"
-fi
-
-if [ -z ${Var+x} ]; 
-then 
-  echo "CHECK 2: variable 'Var' is unset"; 
-else 
-  echo "CHECK 2: variable 'Var' is set, its content is '$Var'"; 
 fi
 
 # CHECK 1: variable ‘VAR’ is set, its content is ‘’

@@ -1,3 +1,4 @@
+var_a="Hello World"
 wh_domain='http://www.whitehouse.gov'
 wh_path='/briefing-room/press-briefings?page='
 wh_base_url="$wh_domain$wh_path"
@@ -11,7 +12,6 @@ else
 	echo "wh_base_url not matched"
 fi
 
-var_a="Hello World"
 another_var=42
 echo $var_a
 echo "$var_a$another_var"

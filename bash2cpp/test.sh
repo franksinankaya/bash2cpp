@@ -1,12 +1,15 @@
 #!/bin/bash
 
 declare -a arr=(
+					"echo4.sh"
+					# "upper.sh"
+					"echo3.sh"
+					# "functions2.sh"
 					"lower0.sh"
 					"upper0.sh"
-					# "upper.sh"
 					#"substring.sh"
 					"echo2.sh"
-					#"special.sh"
+					"special.sh"
 					"functions1.sh"
 					"arguments.sh 1 2 3"
 					"arguments.sh 1"

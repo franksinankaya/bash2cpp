@@ -1,8 +1,8 @@
-echo "Hello world and good day." | cut -d " " -f 1    #Result: Hello
-echo "Hello-world-and-good-day." | cut -d "-" -f 2    #Result: world
-
 echo "Hello" | tr 'el' 'x'    #Result: Hxxxo
 echo "Hello" | tr 'el' 'ay'   #Result: Hayyo
+
+echo "Hello world and good day." | cut -d " " -f 1    #Result: Hello
+echo "Hello-world-and-good-day." | cut -d "-" -f 2    #Result: world
 
 echo "Hello" | tr '[:lower:]' '[:upper:]'   #Result: HELLO
 echo "Hello" | tr '[:upper:]' '[:lower:]'   #Result: hello

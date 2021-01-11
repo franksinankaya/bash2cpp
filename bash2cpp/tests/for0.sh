@@ -1,3 +1,25 @@
+PKGS="php7-openssl-7.3.19-r0  php7-common-7.3.19-r0  php7-fpm-7.3.19-r0  php7-opcache-7.3.19-r0 php7-7.3.19-r0"
+for p in $PKGS
+do
+   echo "Installing $p package"
+done
+
+VALS="one two three four five"
+
+# a simple For loop iterates with space separators.
+for ITEM in $VALS
+do
+
+  echo "value: $ITEM"
+
+done
+
+users='2323dad sdad tj'
+for user in ${users}; do
+  echo ${user}
+done
+
+
 for ITEM in {10..1..-2}; do
 
   echo "count: $ITEM"
@@ -27,17 +49,6 @@ for ITEM in {5..1}; do
 done
 
 
-VALS="one two three four five"
-
-# a simple For loop iterates with space separators.
-for ITEM in $VALS
-do
-
-  echo "value: $ITEM"
-
-done
-
-
 for ITEM in $VALS; do
 
   echo "value: $ITEM"
@@ -54,11 +65,6 @@ do
    echo "Welcome $i times"
 done
 
-PKGS="php7-openssl-7.3.19-r0  php7-common-7.3.19-r0  php7-fpm-7.3.19-r0  php7-opcache-7.3.19-r0 php7-7.3.19-r0"
-for p in $PKGS
-do
-   echo "Installing $p package"
-done
 
 echo "Content of this directory:"
 dir_content=$(ls)
@@ -132,11 +138,6 @@ done
  # echo "Weekday $day"
 # done
 
-
-users='2323dad sdad tj'
-for user in ${users}; do
-  echo ${user}
-done
 
 # Echo list with , deviced
 list='2323dad,sdad,tj'
