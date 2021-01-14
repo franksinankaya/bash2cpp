@@ -8,18 +8,18 @@ REM logic.sh
 
 REM won't parse
 REM populate-volatile.sh
+REM	checkroot.sh
 
 IF NOT EXIST gen GOTO mkdir gen
 
 for %%x in (
+		urandom
 		logic.sh
 		read-only-rootfs-hook.sh
 		hostname.sh
         if.sh
 		functions
 		dmesg.sh
-		checkroot.sh
-		urandom
 		mountnfs.sh
 		redirect.sh
 		umountnfs.sh

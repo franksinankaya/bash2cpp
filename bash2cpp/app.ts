@@ -5,6 +5,7 @@ const babylon = require('babylon');
 
 class ConvertBash {
     private functiondefs: any = ""
+    private redirects: any = []
     private functionnames: any = []
     private pipelines: any = []
     private lines: any
@@ -799,6 +800,16 @@ class ConvertBash {
 
         return text
     }
+
+    private escapeEOL(text: any): any {
+        text = text.replace(/\\n/g, "\\\\n");
+        text = text.replace(/\\f/g, "\\\\f");
+        text = text.replace(/\\r/g, "\\\\r");
+        text = text.replace(/\\t/g, "\\\\t");
+        text = text.replace(/\\v/g, "\\\\v");
+
+        return text
+    }
     /*
      * Array<ArithmeticExpansion |
 	 *				 CommandExpansion |
@@ -982,12 +993,13 @@ class ConvertBash {
                 for (let i = 0; i < varray.length; i++) {
                     if (skipRedirects && (varray[i].type == "Redirect"))
                         continue
-
-                    let q0 = varray[i].loc ? currentline[varray[i].loc.start.col - 1] : ""
-                    let q1 = varray[i].loc ? currentline[varray[i].loc.end.col - 1] :""
+                    let q0offset = varray[i].text ? currentline.indexOf(varray[i].text) : 0
+                    let q1offset = varray[i].text ? currentline.indexOf(varray[i].text) + varray[i].text.length : 0
+                    let q0 = varray[i].loc ? currentline[varray[i].loc.start.col - 1] : currentline[q0offset - 1]
+                    let q1 = varray[i].loc ? currentline[varray[i].loc.end.col - 1] : currentline[q1offset]
                     let t = this.convertCommand(varray[i])
                     if ((q0 == '\'') && (q1 == '\''))
-                        t = '\'' + this.escapeSingleQuotes(t) + '\''
+                        t = '\'' + this.escapeEOL(t) + '\''
                     suffix += t
                     if (i != (varray.length - 1))
                         suffix += " "
@@ -1127,7 +1139,8 @@ class ConvertBash {
                     text += "std::cout.rdbuf(rdbuf);\n"
                 } 
                 else if (numberIo == 0){
-                        this.terminate(redirections)
+                    //this.terminate(redirections)
+                    console.log("fix me")
                 }
             }
             else
@@ -1462,7 +1475,7 @@ class ConvertBash {
         return command.commands.map(c => this.convertCommand(c)).join(';\n');
     }
 
-    public handleCommands(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any, inbound: any) {
+    public handleCommands(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any) {
         let nametext = this.convertCommand(name)
         if (nametext[0] == '"' && nametext[nametext.length - 1] == '"') {
             nametext = nametext.substring(1, nametext.length - 2)
@@ -1632,7 +1645,7 @@ class ConvertBash {
                         if ((nametext == "printf") || (nametext == "echo"))
                             quoteparams = true
 
-                        text += "," + inbound + ", " + quoteparams + ")"
+                        text += "," + quoteparams + ")"
                     }
 
                     return text
@@ -1653,7 +1666,18 @@ class ConvertBash {
         return suffix
     }
 
-    public convertExecCommand(command: any, issuesystem: any = true, handlecommands: any = true, inbound = false, coordinate = []): string {
+    public convertNonExecRedirects(command: any, maintext: any): string {
+        let text = ""
+        let currentlength = this.redirects.length
+        for (let v = 0; v < this.redirects.length; v++) {
+            if (this.redirects[v][0] == command)
+                return "redirects" + v.toString() + "(" + maintext + ")"
+        }
+        this.redirects.push([command, this.currentrowstart, this.currentrowend])
+        return "redirects" + currentlength.toString() + "(" + maintext + ")"
+    }
+
+    public convertExecCommand(command: any, issuesystem: any = true, handlecommands: any = true, coordinate = [], stdout: any = true): string {
         let currentline = ""
         let currentstr = ""
         if (coordinate.length > 0) {
@@ -1666,14 +1690,14 @@ class ConvertBash {
         }
         if (command.name && command.name.text) {
             let nametext = this.convertCommand(command.name)
-            let ignoreRedirects = issuesystem
+            let ignoreRedirects = true
             if (nametext == "exec")
                 ignoreRedirects = false
             let [suffix,] = command.suffix ? this.convertExpansion(command.suffix, ignoreRedirects, currentline) : ["", false];
             let lastnonexpanded = false
             if ((suffix != "") && (suffix[suffix.length - 1] != "\"")) {
                 for (let i = command.suffix.length - 1; i >= 0; i--) {
-                    if (command.suffix[i].type == "Redirect" && issuesystem)
+                    if (command.suffix[i].type == "Redirect")
                         continue
                     if (!command.suffix[i].expansion) {
                         lastnonexpanded = true
@@ -1686,7 +1710,7 @@ class ConvertBash {
             suffix = this.trimTrailingSpaces(suffix)
             let redirecttext = ""
             if (command.suffix && ignoreRedirects) {
-                const maintext = this.handleCommands(command.name, command.suffix, suffix, issuesystem, inbound)
+                const maintext = this.handleCommands(command.name, command.suffix, suffix, issuesystem)
                 redirecttext = maintext
                 for (let i = 0; i < command.suffix.length; i++) {
                     if ((command.suffix[i].type == "Redirect")) {
@@ -1699,26 +1723,39 @@ class ConvertBash {
                 return redirecttext
             }
 
-            if (handlecommands)
-                return this.handleCommands(command.name, command.suffix, suffix, issuesystem, inbound)
+            if (handlecommands) {
+                let t = this.handleCommands(command.name, command.suffix, suffix, issuesystem)
+                let hasRedirect = false
+                if (command.suffix) {
+                    for (let i = 0; i < command.suffix.length; i++) {
+                        if ((command.suffix[i].type == "Redirect")) {
+                            hasRedirect = true;
+                            break;
+                        }
+                    }
+                }
+                if (hasRedirect)
+                    return this.convertNonExecRedirects(command, t)
+                return t
+            }
             else
                 return suffix
         }
         if (command.type == "Pipeline") {
-            return this.convertPipeline(command)
+            return this.convertPipeline(command, stdout)
         }
         this.terminate(command)
     }
 
-    public convertPipeline(command: any): string {
+    public convertPipeline(command: any, stdout : any = true): string {
         let text = ""
         let currentlength = this.pipelines.length
         for (let v = 0; v < this.pipelines.length; v++) {
             if (this.pipelines[v][0] == command)
-                return "pipeline" + v.toString() + "()"
+                return "pipeline" + v.toString() + "(" + stdout + ")"
         }
         this.pipelines.push([command, this.currentrowstart, this.currentrowend])
-        return "pipeline" + currentlength.toString() + "()"
+        return "pipeline" + currentlength.toString() + "(" + stdout + ")"
     }
 
     /* 
@@ -1732,11 +1769,15 @@ class ConvertBash {
             this.terminate(command)
 
         let text = ""
+        let pipeline = false
         if (command.loc.start >= 0 && command.loc.end > 0) {
             for (let i = 0; i < command.commandAST.commands.length; i++) {
-                text += this.convertExecCommand(command.commandAST.commands[i], false)
+                text += this.convertExecCommand(command.commandAST.commands[i], false, true, [], false)
+                if (command.commandAST.commands[0].type == "Pipeline")
+                    pipeline = true
             }
-            text = "execnoout(" + text + ")"
+            if (!pipeline)
+                text = "execnoout(" + text + ")"
         }
         return text;
     }
@@ -1865,9 +1906,32 @@ class ConvertBash {
 
     public getFunctionDefinitions(): string {
         if (this.functiondefs)
-            return "\n\n" + this.functiondefs + "\n\n"
+            return "\n\n" + this.functiondefs
         else
             return "\n"
+    }
+
+    public getRedirectDefinitions(): string {
+        if (this.redirects) {
+            let text = ""
+            for (let v = 0; v < this.redirects.length; v++) {
+                let name = "redirects" + v
+
+                text += "std::string " + name + "(const std::string &str) {\n"
+                let redir = "execnoout(str);\n"
+                for (let r = this.redirects[v][0].suffix.length - 1; r >= 0; r--) {
+                    if (this.redirects[v][0].suffix[r].type == "Redirect") {
+                        redir = this.convertStdRedirects(this.redirects[v][0].suffix, r, redir)
+                    }
+                }
+                text += redir
+                text += "return \"\";\n"
+                text += "}\n"
+                text += "\n"
+            }
+            return "\n\n" + text + "\n\n"
+        }
+        return ""
     }
 
     public getPipelineDefinitions(): string {
@@ -1876,46 +1940,26 @@ class ConvertBash {
             for (let v = 0; v < this.pipelines.length; v++) {
                 let name = "pipeline" + v
 
-                text += "std::string " + name + "() {\n"
+                text += "std::string " + name + "(bool stdout = true) {\n"
 
                 for (let c = 0; c < this.pipelines[v][0].commands.length; c++) {
-                    let backupcin = "backupin" + c.toString()
-                    let backupcout = "backupout" + c.toString()
+                    let scope = "scope" + c.toString()
                     let redirectc = "redirectStream" + c.toString()
-                    let previousredirectc = c ? "redirectStream" + (c - 1).toString() : 0
+                    let previousc = c ? (c - 1): 0
+                    let previousscope = "scope" + previousc.toString()
 
-                    text += "std::streambuf *" + backupcout + " = std::cout.rdbuf();\n"
-                    text += "std::streambuf *" + backupcin + " = std::cin.rdbuf();\n"
-                    text += "std::stringstream   " + redirectc + ";\n"
-
-                    if (c == 0)
-                        text += "std::cout.rdbuf(" + redirectc + ".rdbuf());\n"
-                    else {
-                        text += "std::cout.rdbuf(" + redirectc + ".rdbuf());\n"
-                        text += "std::cin.rdbuf(" + previousredirectc + ".rdbuf());\n"
-                    }
-
-                    //if (this.pipelines[v].commands.length != 2)
-                    //    this.terminate(this.pipelines[v])
-
+                    text += "scopeexitcincout " + scope + ";\n"
+                    if (c > 0)
+                        text += scope + ".writecin(" + previousscope + ".buf());\n"
                     let coordinate = [this.pipelines[v][1], this.pipelines[v][2]]
-                    if (c == 0)
-                        text += this.convertExecCommand(this.pipelines[v][0].commands[c], true, true, false,coordinate) + ";\n"
-                    else
-                        text += this.convertExecCommand(this.pipelines[v][0].commands[c], true, true, true, coordinate) + ";\n"
-                    text += "std::cout.rdbuf(" + backupcout + ");\n\n"
-                    text += "std::cin.rdbuf(" + backupcin + ");\n\n"
+                    text += this.convertExecCommand(this.pipelines[v][0].commands[c], true, true, coordinate) + ";\n"
+                    text += scope + ".release();\n"
                     text += "\n"
-
-
-                    // text += "std::streambuf * backupout;\n"
-                    // text += "backupout = std::cout.rdbuf();\n"
-                    // text += "scopeexitcout scope(backupout);\n"
-                    // text += "std::stringstream   redirectOutStream;\n"
-                    // text += "std::cout.rdbuf(redirectOutStream.rdbuf());\n"
                 }
                 text += "\n"
-                text += "return redirectStream" + (this.pipelines[v][0].commands.length - 1).toString() + ".str(); \n"
+                let finalres = "scope" + (this.pipelines[v][0].commands.length - 1).toString() + ".buf()"
+                text += "std::cout << " + finalres + ";\n"
+                text += "return " + finalres + "; \n"
                 text += "}\n"
                 text += "\n"
             }
@@ -2040,71 +2084,115 @@ class ConvertBash {
         }\n"
 
         const execCommand = "\n\
-        void execcommand(const std::string &cmd, int& exitstatus, std::string &result, int direction = 0, bool stdout = true, bool quoteparams=false) \n\
-        { \n\
-            exitstatus = 0; \n\
-            std::string cmd_ = cmd;\n\
-            size_t offset = cmd_.find(\" \");\n\
-            if (offset !=std::string::npos) {\n\
-                if (quoteparams)\n\
-                    cmd_ = cmd_.substr(0, offset) + \" \\\"\" + cmd_.substr(offset + 1, std::string::npos) + \"\\\"\";\n\
-            }\n\
-            auto pPipe = ::popen(cmd_.c_str(), !direction ? \"r\": \"w\"); \n\
-            if (pPipe == nullptr) { \n\
-                return;\n\
-            }\n\
-        \n\
-            if (direction == 0) {\n\
-                std::array <char, 256> buffer; \n\
-            \n\
-                while (not std::feof(pPipe)) \n\
-                {\n\
-                    auto bytes = std::fread(buffer.data(), 1, buffer.size(), pPipe); \n\
-                    result.append(buffer.data(), bytes);\n\
-                }\n\
-            } else {\n\
-                std::string line;\n\
-                std::string out;\n\
-                while (std::getline(std:: cin, line))\n\
-                {\n\
-                    out = out + line + \"\\n\";\n\
-                }\n\
-                fwrite(out.data(), 1, out.size(), pPipe);\n\
-            }\n\
-        \n\
-            auto rc = ::pclose(pPipe);\n\
-        \n\
-            if (WIFEXITED(rc)) {\n\
-                exitstatus = WEXITSTATUS(rc);\n\
-            }\n\
-            if (stdout) \n\
-                std::cout << result;\n\
+int createChild(std::vector<char *> &aArguments, std::string &result, bool stdout) {\n\
+    int aStdinPipe[2];\n\
+    int aStdoutPipe[2];\n\
+    int nChild;\n\
+    char nChar;\n\
+    int nResult;\n\
 \n\
+    if (pipe(aStdinPipe) < 0) {\n\
+        return -1;\n\
+    }\n\
+    if (pipe(aStdoutPipe) < 0) {\n\
+        close(aStdinPipe[PIPE_READ]);\n\
+        close(aStdinPipe[PIPE_WRITE]);\n\
+        return -1;\n\
+    }\n\
+\n\
+    nChild = fork();\n\
+    if (0 == nChild) {\n\
+        if (dup2(aStdoutPipe[PIPE_WRITE], STDOUT_FILENO) == -1) {\n\
+            exit(errno);\n\
         }\n\
+\n\
+        if (dup2(aStdoutPipe[PIPE_WRITE], STDERR_FILENO) == -1) {\n\
+            exit(errno);\n\
+        }\n\
+\n\
+        close(aStdinPipe[PIPE_READ]);\n\
+        close(aStdinPipe[PIPE_WRITE]);\n\
+        close(aStdoutPipe[PIPE_READ]);\n\
+        close(aStdoutPipe[PIPE_WRITE]);\n\
+\n\
+        nResult = execvpe(aArguments[0], &aArguments[0], environ);\n\
+\n\
+        exit(nResult);\n\
+    } else if (nChild > 0) {\n\
+        close(aStdinPipe[PIPE_READ]);\n\
+        close(aStdoutPipe[PIPE_WRITE]);\n\
+\n\
+        while (read(aStdoutPipe[PIPE_READ], &nChar, 1) == 1) {\n\
+            if (stdout)\n\
+                std::cout << nChar;\n\
+            result += nChar;\n\
+        }\n\
+\n\
+        close(aStdinPipe[PIPE_WRITE]);\n\
+        close(aStdoutPipe[PIPE_READ]);\n\
+\n\
+        int rc;\n\
+        if (waitpid(nChild, &rc, 0) != -1) {\n\
+            if (WIFEXITED(rc)) {\n\
+                nChild = WEXITSTATUS(rc);\n\
+            }\n\
+        }\n\
+    } else {\n\
+        close(aStdinPipe[PIPE_READ]);\n\
+        close(aStdinPipe[PIPE_WRITE]);\n\
+        close(aStdoutPipe[PIPE_READ]);\n\
+        close(aStdoutPipe[PIPE_WRITE]);\n\
+    }\n\
+    return nChild;\n\
+}\n\
+\n\
+void execcommand(const std::string &cmd, int & exitstatus, std::string &result, bool stdout = true, bool quoteparams = false) \n\
+{\n\
+    std::string cmd_ = cmd;\n\
+    size_t offset = cmd_.find(\" \");\n\
+    if (offset !=std::string::npos) {\n\
+        if (quoteparams)\n\
+            cmd_ = cmd_.substr(0, offset) + \" \\\"\" + cmd_.substr(offset + 1, std::string::npos) + \"\\\"\";\n\
+    }\n\
+    std::vector<char *> toks;\n\
+    wordexp_t p;\n\
+    char **w;\n\
+    int ret;\n\
         \n\
-        const int checkval(const std::string &cmd, int direction = 0) { \n\
+    ret = wordexp(cmd_.c_str(), &p, 0);\n\
+    if (ret)\n\
+        exit(-1);\n\
+    w = p.we_wordv;\n\
+    for (int i = 0; i < p.we_wordc; i++) {\n\
+        toks.push_back(w[i]);\n\
+    }\n\
+    toks.push_back(NULL);\n\
+    exitstatus = createChild(toks, result, stdout);\n\
+}\n\
+        \n\
+        const int checkval(const std::string &cmd) { \n\
             int exitstatus; \n\
             std::string result;\n\
             if (!cmd.empty()) {\n\
-                execcommand(cmd, exitstatus, result, direction);\n\
+                execcommand(cmd, exitstatus, result);\n\
             } else {\n\
                 exitstatus = mystoi(get_env(\"?\"), 0);\n\
             }\n\
             return exitstatus == 0; \n\
         }\n\
         \n\
-        const std::string exec(const std::string &cmd, int direction = 0, bool quoteparams = false) {\n\
+        const std::string exec(const std::string &cmd, bool quoteparams = false) {\n\
             int exitstatus; \n\
             std::string result;\n\
-            execcommand(cmd, exitstatus, result, direction, true, quoteparams);\n\
+            execcommand(cmd, exitstatus, result, true, quoteparams);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
         }\n\
         \n\
-        const std::string execnoout(const std::string &cmd, int direction = 0) {\n\
+        const std::string execnoout(const std::string &cmd) {\n\
             int exitstatus; \n\
             std::string result; \n\
-            execcommand(cmd, exitstatus, result, direction, false);\n\
+            execcommand(cmd, exitstatus, result, false);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
         }\n"
@@ -2298,23 +2386,23 @@ class ConvertBash {
         }\n"
 
         let text = ""
-        text += "void processargs(std::initializer_list<std::string> &list)\n"
+        text += "template<typename T> void processargs(T &list)\n"
         text += "{\n"
-        text += "int i = 0;\n"
-        text += "std::string combinedargs;\n"
-        text += "set_env(\"#\", (int)list.size());\n"
-        text += "for (auto elem : list )\n"
-        text += "{\n"
-        text += "set_env(std::to_string(i + 1).c_str(), elem.c_str());\n"
-        text += "combinedargs += std::string(elem.c_str());\n"
-        text += "if (i != (list.size() - 1)) combinedargs += \" \";\n"
-        text += "i++;\n"
-        text += "}\n"
-        text += "for (int i = (int)list.size() + 1; i < 11; i++) {\n"
-        text += "set_env(std::to_string(i).c_str(), \" \");\n"
-        text += "}\n"
-        text += "if (combinedargs.size() == 0) combinedargs = \" \";\n"
-        text += "set_env(\"@\", combinedargs);\n"
+        text += "    int i = 0;\n"
+        text += "    std::string combinedargs;\n"
+        text += "    set_env(\"#\", (int)list.size());\n"
+        text += "    for (auto elem : list )\n"
+        text += "    {\n"
+        text += "        set_env(std::to_string(i + 1).c_str(), elem.c_str());\n"
+        text += "        combinedargs += std::string(elem.c_str());\n"
+        text += "        if (i != (list.size() - 1)) combinedargs += \" \";\n"
+        text += "        i++;\n"
+        text += "    }\n"
+        text += "    for (int i = (int)list.size() + 1; i < 11; i++) {\n"
+        text += "        set_env(std::to_string(i).c_str(), \" \");\n"
+        text += "    }\n"
+        text += "    if (combinedargs.size() == 0) combinedargs = \" \";\n"
+        text += "        set_env(\"@\", combinedargs);\n"
         text += "}\n"
         const processargsstr = text
 
@@ -2344,71 +2432,121 @@ class ConvertBash {
         \n"
 
         let scopeexitstr = 
-        "class scopeexitcerrfile{\n" +
-            "std::streambuf *m_backup;\n" +
-            "std::ofstream m_redirectStream;\n" +
-            "public:\n" +
-            "scopeexitcerrfile(const std::string &file, bool append = false) {\n" +
-            "append ? m_redirectStream = std::ofstream(file, std::ios_base::app): m_redirectStream = std::ofstream(file);\n" +
-            "m_backup = std::cerr.rdbuf();\n" +
-            "if (m_redirectStream) std::cerr.rdbuf(m_redirectStream.rdbuf());\n" +
-            "}\n" +
-            "~scopeexitcerrfile(){std::cerr.rdbuf(m_backup);}\n" +
-            "};\n" +
-        "class scopeexitcinfile{\n" +
-            "std::streambuf *m_backup;\n" +
-            "std::ifstream m_redirectStream;\n" +
-            "public:\n" +
-            "scopeexitcinfile(const std::string &file) {\n" +
-             "m_redirectStream = std::ifstream(file);\n" +
-            "m_backup = std::cin.rdbuf();\n" +
-            "if (m_redirectStream) std::cin.rdbuf(m_redirectStream.rdbuf());\n" +
-            "}\n" +
-            "~scopeexitcinfile(){std::cin.rdbuf(m_backup);}\n" +
-            "};\n" +
+    "class scopeexitcerrfile{\n" +
+    "    std::streambuf *m_backup;\n" +
+    "    std::ofstream m_redirectStream;\n" +
+    "public:\n" +
+    "    scopeexitcerrfile(const std::string &file, bool append = false) {\n" +
+    "        append ? m_redirectStream = std::ofstream(file, std::ios_base::app): m_redirectStream = std::ofstream(file);\n" +
+    "        m_backup = std::cerr.rdbuf();\n" +
+    "        if (m_redirectStream) std::cerr.rdbuf(m_redirectStream.rdbuf());\n" +
+    "    }\n" +
+    "    ~scopeexitcerrfile(){std::cerr.rdbuf(m_backup);}\n" +
+    "};\n" +
+    "class scopeexitcincout {\n\
+    \n\
+std::streambuf *backupout = std::cout.rdbuf();\n\
+	std::streambuf *backupin = std::cin.rdbuf();\n\
+	std::stringstream buffer;\n\
+	int readfd[2];\n\
+	int m_inbackup;\n\
+	bool m_released = false;\n\
+\n\
+	public: \n\
+\n\
+	~scopeexitcincout() {\n\
+		release();\n\
+	}\n\
+	scopeexitcincout() {\n\
+		std::cout.rdbuf(buffer.rdbuf());\n\
+		pipe(readfd);\n\
+		m_inbackup = dup(0);\n\
+		dup2(readfd[0], STDIN_FILENO); \n\
+		close(readfd[0]);\n\
+	}\n\
+\n\
+	std::string buf() { return buffer.str();}\n\
+\n\
+	void release() {\n\
+		if (m_released) return;\n\
+\n\
+		std::cout.rdbuf(backupout);\n\
+		std::cin.rdbuf(backupin);\n\
+		dup2(m_inbackup, 0); \n\
+		close(m_inbackup); \n\
+		m_released = true;\n\
+	}\n\
+\n\
+	void writecin(std::string str) {\n\
+		write(readfd[1], str.data(), str.size());\n\
+		close(readfd[1]);\n\
+	}\n\
+};\n\
+" +
+    "class scopeexitcinfile {\n\
+    \n\
+        int m_backup; \n\
+        int m_redirectStream; \n\
+        public: \n\
+        scopeexitcinfile(const std:: string &file) {\n\
+        \n\
+            m_redirectStream = open(file.c_str(), O_RDONLY); \n\
+            m_backup = dup(0); \n\
+            if (m_redirectStream >= 0) {\n\
+            \n\
+                dup2(m_redirectStream, STDIN_FILENO); \n\
+                close(m_redirectStream); \n\
+            } \n\
+        } \n\
+        ~scopeexitcinfile() {\n\
+        \n\
+            dup2(m_backup, 0); \n\
+            close(m_backup); \n\
+        } \n\
+    }; \n" +
         "class scopeexitcoutfile{\n" +
-            "std::streambuf *m_backup;\n" +
-            "std::ofstream m_redirectStream;\n" +
-            "public:\n" +
-            "scopeexitcoutfile(const std::string &file, bool append = false) {\n" +
-             "append ? m_redirectStream = std::ofstream(file, std::ios_base::app): m_redirectStream = std::ofstream(file);\n" +
-            "m_backup = std::cout.rdbuf();\n" +
-            "if (m_redirectStream) std::cout.rdbuf(m_redirectStream.rdbuf());\n" +
-            "}\n" +
-            "~scopeexitcoutfile(){std::cout.rdbuf(m_backup);}\n" +
-            "};\n" +
+        "    std::streambuf *m_backup;\n" +
+        "    std::ofstream m_redirectStream;\n" +
+        "    public:\n" +
+        "    scopeexitcoutfile(const std::string &file, bool append = false) {\n" +
+        "        append ? m_redirectStream = std::ofstream(file, std::ios_base::app): m_redirectStream = std::ofstream(file);\n" +
+        "        m_backup = std::cout.rdbuf();\n" +
+        "        if (m_redirectStream) std::cout.rdbuf(m_redirectStream.rdbuf());\n" +
+        "    }\n" +
+        "    ~scopeexitcoutfile(){std::cout.rdbuf(m_backup);}\n" +
+        "};\n" +
         "class scopeexitcout{\n" +
-            "std::streambuf *m_backup;\n" +
-            "std::stringstream m_redirectStream;\n" +
-            "public:\n" +
-            "std::string str(){ return m_redirectStream.str();} \n" +
-            "scopeexitcout(){\n" +
-            "m_backup = std::cout.rdbuf();\n" +
-            "std::cout.rdbuf(m_redirectStream.rdbuf());\n" +
-            "}\n" +
-            "~scopeexitcout(){std::cout.rdbuf(m_backup); std::cout << m_redirectStream.str();}\n" +
-            "};\n"
+        "    std::streambuf *m_backup;\n" +
+        "    std::stringstream m_redirectStream;\n" +
+        "    public:\n" +
+        "    std::string str(){ return m_redirectStream.str();} \n" +
+        "    scopeexitcout(){\n" +
+        "        m_backup = std::cout.rdbuf();\n" +
+        "        std::cout.rdbuf(m_redirectStream.rdbuf());\n" +
+        "    }\n" +
+        "    ~scopeexitcout(){std::cout.rdbuf(m_backup); std::cout << m_redirectStream.str();}\n" +
+        "};\n"
 
         let upperstr = "std::string upper(std::string str)\n" +
-            "{\n" +
-            "std::transform(str.begin(), str.end(), str.begin(), ::toupper);\n" +
-            "return str;\n" +
-            "}\n"
+        "{\n" +
+        "    std::transform(str.begin(), str.end(), str.begin(), ::toupper);\n" +
+        "    return str;\n" +
+        "}\n"
         let lowerstr = "std::string lower(std::string str)\n" +
-            "{\n" +
-            "std::transform(str.begin(), str.end(), str.begin(), ::tolower);\n" +
-            "return str;\n" +
-            "}\n"
+        "{\n" +
+        "    std::transform(str.begin(), str.end(), str.begin(), ::tolower);\n" +
+        "    return str;\n" +
+        "}\n"
         let uppercapitalize = "std::string uppercapitalize(std::string str)\n" +
-            "{\n" +
-            "str[0] = toupper(str[0]);\n" +
-            "return str;\n" +
-            "}\n"
+        "{\n" +
+        "    str[0] = toupper(str[0]);\n" +
+        "    return str;\n" +
+        "}\n"
         let lowercapitalize = "std::string lowercapitalize(std::string str)\n" +
-            "{\n" +
-            "str[0] = tolower(str[0]);\n" +
-            "return str;\n" +
-            "}\n"
+        "{\n" +
+        "    str[0] = tolower(str[0]);\n" +
+        "    return str;\n" +
+        "}\n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
             + charfileexists + filereadable + fileexecutable + filewritable + direxists + envCommand + execCommand + splitCommand + regexstr + echostr
             + cdstr + readstr + incrementstr + processargsstr + scopeexitstr + upperstr + lowerstr + uppercapitalize + lowercapitalize;
@@ -2437,24 +2575,19 @@ try {
         .filter((c: any) => !!c) // filter empty commands
         .join(';\n')
 
-    let argstr = "if (argc > 1) set_env(\"#\", argc - 1);\n"
-    argstr += "else  set_env(\"#\", \"0\");\n"
-    argstr += "std::string combinedargs;\n"
+    let argstr = "void convertMainArgs(int argc, const char *argv[]){\n"
+    argstr += "std::vector<std::string> args;\n"
     argstr += "for (int i = 1; i < argc; i++) {\n"
-    argstr += "set_env(std::to_string(i).c_str(), argv[i]);\n"
-    argstr += "combinedargs += std::string(argv[i]);\n"
-    argstr += "if (i != (argc - 1)) combinedargs += \" \";\n"
+    argstr += "args.push_back(std::string(argv[i]));\n"
     argstr += "}\n"
-    argstr += "if (combinedargs.size() == 0) combinedargs = \" \";\n"
-    argstr += "set_env(\"@\", combinedargs);\n"
-    argstr += "for (int i = argc; i < 11; i++) {\n"
-    argstr += "set_env(std::to_string(i).c_str(), \" \");\n"
+    argstr += "processargs(args);\n"
     argstr += "}\n"
 
     str = "#include <stdlib.h> \n" +
         "#include <stdio.h>\n" +
         "#include <string.h>\n" +
         "#include <string>\n" +
+        "#include <unistd.h>\n" +
         "#include <stdarg.h>\n" +
         "#include <memory>\n" +
         "#include <iostream>\n" +
@@ -2463,13 +2596,21 @@ try {
         "#include <glob.h>\n" +
         "#include <pcre.h>\n" +
         "#include <filesystem>\n" +
+        "#include <sys/types.h>\n" +
+        "#include <sys/wait.h>\n" +
+        "#include <fcntl.h>\n" +
         "#include <fstream>\n" +
+        "#include <wordexp.h>\n" +
+        "#define PIPE_READ 0\n" +
+        "#define PIPE_WRITE 1\n" +
         converter.getSupportDefinitions() +
         converter.getPipelineDefinitions() +
+        converter.getRedirectDefinitions() +
         converter.getFunctionDefinitions() +
+        argstr +
         "\n" +
         "int main(int argc, const char *argv[]) {\n" +
-        argstr + 
+        "convertMainArgs(argc, argv);\n" + 
         parseresult +
         ";\n" +
         "return 0;\n" +
