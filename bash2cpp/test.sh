@@ -37,6 +37,7 @@ declare -a arr=(
 					"if3.sh"
 					# "expansions.sh"
 					# "for1.sh"
+					# "for4.sh"
 					"if0.sh"
 					"case0.sh"
 					"arithmetic.sh"

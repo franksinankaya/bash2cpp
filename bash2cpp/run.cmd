@@ -13,6 +13,7 @@ REM	checkroot.sh
 IF NOT EXIST gen GOTO mkdir gen
 
 for %%x in (
+		for3.sh
 		urandom
 		logic.sh
 		read-only-rootfs-hook.sh
