@@ -2571,7 +2571,7 @@ std::streambuf *backupout = std::cout.rdbuf();\n\
     }
 }
 
-const parse = require('bash-parser');
+const parse = require('./bash-parser');
 const ast = parse(file, { mode: 'bash' ,insertLOC: true });
 
 const converter = new ConvertBash();

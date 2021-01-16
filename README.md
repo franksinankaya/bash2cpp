@@ -10,8 +10,14 @@ Reasons why you may want to try bash2cpp are:
 
 bash2cpp is not a complete translator but does a good job for simple scripts.
 
-# COMPILATION
+# INSTALLATION
+* git submodule init
+* git submodule update
 * cd bash2cpp
+* cd bash2cpp/bashparser
+* npm install --save-dev
+* rpm run build
+* cd ..
 * npm install --save-dev typescript
 * npm install
 * npm run build
