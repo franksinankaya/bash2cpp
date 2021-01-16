@@ -1,6 +1,7 @@
 #!/bin/bash
 
 declare -a arr=(
+					 "for4.sh"
 					"echo4.sh"
 					"showsize.sh"
 					# "upper.sh"
@@ -37,7 +38,6 @@ declare -a arr=(
 					"if3.sh"
 					# "expansions.sh"
 					# "for1.sh"
-					# "for4.sh"
 					"if0.sh"
 					"case0.sh"
 					"arithmetic.sh"

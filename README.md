@@ -100,7 +100,6 @@ Review missing functionality list.
 * if (( var1 > var2 )) doesn't work
 * nested pipes over 2 level not supported
 * for (( ; ; ))
-* for (( c=1; c<=5; c++ ))
 * DB_AWS_ZONE=('us-east-2a' 'us-west-1a' 'eu-central-1a')  for zone in "${DB_AWS_ZONE[@]}"
 * . /etc/default/rcS
 * VALS=( 'five' 'four' 'three' 'two' 'one' ) for ITEM in "${VALS[@]}"; do

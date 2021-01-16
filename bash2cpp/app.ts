@@ -142,11 +142,11 @@ class ConvertBash {
         }
         this.terminate(expression)
     }
-    private convertArithmeticExpansion(command: any): string {
+    private convertArithmeticExpansion(command: any, expression:any, ast:any): string {
         if ((command.loc.start < 0) || (command.loc.end < 0)) {
             return ""
         }
-        return this.convertArithmeticAST(command.arithmeticAST, command.expression, command.loc)
+        return this.convertArithmeticAST(ast, expression, command.loc)
     }
     private convertLogicalExpression(command: any): string {
         const [clause, thenval, elseval] = this.convertIfStatement(command, command.left, command.right)
@@ -514,8 +514,10 @@ class ConvertBash {
         let skipname = false
         let leftindex
 
-        if ((clausecommands.name.text == "[") || (clausecommands.name.text == "[[") || (clausecommands.name.text == "test")) {
-            skipname = true;
+        if (clausecommands.name) {
+            if ((clausecommands.name.text == "[") || (clausecommands.name.text == "[[") || (clausecommands.name.text == "test")) {
+                skipname = true;
+            }
         }
 
         let redirectBug = false
@@ -1384,6 +1386,54 @@ class ConvertBash {
         let text = ""
         let i
 
+        if (command.clause) {
+            let text = ""
+            if (command.clause.commands[0].type == "Subshell") {
+                if (command.clause.commands.length != 1)
+                    this.terminate(command)
+                if (command.clause.commands[0].list.commands[0].list.commands.length != 3)
+                    this.terminate(command)
+                const left = command.clause.commands[0].list.commands[0].list.commands[0]
+                const mid = command.clause.commands[0].list.commands[0].list.commands[1]
+                const right = command.clause.commands[0].list.commands[0].list.commands[2]
+                let lefttext = left.prefix[0].text
+                try {
+                    let arithmeticAST
+                    arithmeticAST = babylon.parse(lefttext);
+                    lefttext = this.convertArithmeticExpansion(left, left.prefix[0].text, arithmeticAST.program.body[0].expression)
+                } catch (err) {
+                    throw new SyntaxError(`Cannot parse arithmetic expression "${lefttext}": ${err.message}`);
+                }                
+
+                let midtext = mid.name.text + mid.suffix[0].op.text + mid.suffix[0].file.text
+                try {
+                    let arithmeticAST
+                    arithmeticAST = babylon.parse(midtext);
+                    midtext = this.convertArithmeticExpansion(mid, midtext, arithmeticAST.program.body[0].expression)
+                } catch (err) {
+                    throw new SyntaxError(`Cannot parse arithmetic expression "${midtext}": ${err.message}`);
+                }
+
+                let righttext = right.name.text
+                try {
+                    let arithmeticAST
+                    arithmeticAST = babylon.parse(righttext);
+                    righttext = this.convertArithmeticExpansion(right, righttext, arithmeticAST.program.body[0].expression)
+                } catch (err) {
+                    throw new SyntaxError(`Cannot parse arithmetic expression "${midtext}": ${err.message}`);
+                }
+                text += "{\n"
+                text += "for (" + lefttext + "; " + midtext + "; " + righttext + ")"
+                text += "{\n"
+                //text += "set_env(\"" + command.name.text + "\", vals[i]);\n"
+                const cmds = this.convertCommand(command.do);
+                text += cmds + ";\n";
+                text += "};\n"
+                text += "}\n"
+            }
+            return text;
+        }
+
         text += "{\n"
         let [t, countstr] = this.convertRangeExpansion(command.wordlist)
         text += t
@@ -1882,7 +1932,7 @@ class ConvertBash {
             case 'LogicalExpression':
                 return this.convertLogicalExpression(command);
             case 'ArithmeticExpansion':
-                return this.convertArithmeticExpansion(command);
+                return this.convertArithmeticExpansion(command, command.expression, command.arithmeticAST);
             case 'If':
                 return this.convertIf(command);
             case 'ParameterExpansion':
