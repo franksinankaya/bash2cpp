@@ -2185,6 +2185,7 @@ void execcommand(const std::string &cmd, int & exitstatus, std::string &result, 
     }\n\
     toks.push_back(NULL);\n\
     exitstatus = createChild(toks, result, stdout);\n\
+    wordfree(&p);\n\
 }\n\
         \n\
         const int checkval(const std::string &cmd) { \n\
