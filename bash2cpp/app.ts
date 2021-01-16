@@ -810,6 +810,24 @@ class ConvertBash {
 
         return text
     }
+
+    // remove "$val" or '$val'
+    private removeQuotesFromVariables(strbegin: any, strend: any): [string, string] {
+        var last2 = strbegin.slice(-2);
+        var first2 = strend.substring(0, 2);
+
+        // remove "$val" or '$val'
+        if ((("\\\"") == (last2)) && (("\\\"") == (first2))) {
+            strbegin = strbegin.substring(0, strbegin.length - 2)
+            strend = strend.substring(2)
+        }
+        else if ((("\\\'") == (last2)) && (("\\\'") == (first2))) {
+            strbegin = strbegin.substring(0, strbegin.length - 2)
+            strend = strend.substring(2)
+        }
+
+        return [strbegin, strend]
+    }
     /*
      * Array<ArithmeticExpansion |
 	 *				 CommandExpansion |
@@ -834,7 +852,7 @@ class ConvertBash {
             }
 
             // look for missing string termination
-            for (let i = 0; i < command.expansion.length; i++) {
+            /*for (let i = 0; i < command.expansion.length; i++) {
                 if (command.expansion[i]) {
                     const expansion = this.convertCommand(command.expansion[i]);
                     if (expansion != "") {
@@ -849,7 +867,7 @@ class ConvertBash {
                         curexpansions++
                     }
                 }
-            }
+            }*/
 
             let nonexpansionchanges = []
             let nonexpansionoffsets = []
@@ -913,6 +931,7 @@ class ConvertBash {
                 text = p + exp + e
             }
 
+            let laststrend = ""
             for (let i = command.expansion.length - 1; i >= 0; i--) {
                 if (command.expansion[i]) {
                     const expansion = this.convertCommand(command.expansion[i]);
@@ -928,23 +947,20 @@ class ConvertBash {
                             plus = ""
                         }
 
+                        var last2 = strbegin.slice(-2);
+                        var first2 = strend.substring(0, 2);
 
-                        // remove "$val" or '$val'
-                        if ((strbegin.indexOf("\\\"") == (strbegin.length - 2)) && (strend.indexOf("\\\"") == (0))) {
-                            strbegin = strbegin.substring(0, strbegin.length - 2)
-                            strend = strend.substring(2)
-                        }
-                        else if ((strbegin.indexOf("\\\'") == (strbegin.length - 2)) && (strend.indexOf("\\\'") == (0))) {
-                            strbegin = strbegin.substring(0, strbegin.length - 2)
-                            strend = strend.substring(2)
-                        }
+                        [strbegin, strend] = this.removeQuotesFromVariables(strbegin, strend)
+
+                        if (i == (command.expansion.length - 1))
+                            laststrend = strend
 
                         if ((strbegin != "") && ((strbegin != "\"")))
                             text = strbegin + strquotes + plus + expansion
                         else
                             text = expansion
 
-                        if ((strend != "") && ((strend != "\""))) {
+                        if ((strend != "") && ((strend != "\"")) && (strend != "\\\"")) {
                             text += plus + strquotes;
                             text += strend;
                         }
@@ -955,7 +971,7 @@ class ConvertBash {
             text = this.convertQuotes(command.expansion, text)
 
             if (nonexpansionoffsets[nonexpansionoffsets.length - 1] > command.expansion[command.expansion.length - 1].loc.start)
-                if (nonexpansions[nonexpansionoffsets.length - 1] && (nonexpansions[nonexpansionoffsets.length - 1] != "\\\""))
+                if (nonexpansions[nonexpansionoffsets.length - 1] && (nonexpansions[nonexpansionoffsets.length - 1] != "\\\"") && (laststrend != "\\\""))
                     if (numexpansions && !this.isStringTerminated(text))
                         text += "\""
             return text;

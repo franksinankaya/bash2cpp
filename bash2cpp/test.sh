@@ -2,7 +2,7 @@
 
 declare -a arr=(
 					"echo4.sh"
-					# "showsize.sh"
+					"showsize.sh"
 					# "upper.sh"
 					"echo3.sh"
 					# "functions2.sh"
