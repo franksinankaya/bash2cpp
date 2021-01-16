@@ -1958,6 +1958,7 @@ class ConvertBash {
                 }
                 text += "\n"
                 let finalres = "scope" + (this.pipelines[v][0].commands.length - 1).toString() + ".buf()"
+                text += "if (stdout)\n"
                 text += "std::cout << " + finalres + ";\n"
                 text += "return " + finalres + "; \n"
                 text += "}\n"
