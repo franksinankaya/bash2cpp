@@ -159,10 +159,6 @@ class ConvertBash {
             this.terminate(command)
     }
 
-    private replaceAll(str, find, replace) {
-        return str.replace(new RegExp(find, 'g'), replace);
-    }
-
     private isStringTerminated(str: any): boolean {
         if ((str.charAt(str.length - 2) != "\\") &&
             (str.charAt(str.length - 1) == "\"")
@@ -1456,6 +1452,13 @@ class ConvertBash {
         text += "}\n"
         return text
     }
+
+    public replaceAll(pattern: any, from: any, to: any): string {
+        const pieces = pattern.split(from);
+        pattern = pieces.join(to);
+        return pattern
+    }
+
     public convertCase(command: any): string {
         let clause = this.convertCommand(command.clause)
         let text = ""
@@ -1482,7 +1485,7 @@ class ConvertBash {
                 else
                     text += "else if"
 
-                pattern = pattern.replace("*", ".*")
+                pattern = this.replaceAll(pattern, "*", ".*")
                 text += "(regexmatch(clause, \"^\" + std::string(" + pattern + ") + \"$\")) { \n"
                 text += body + ";\n"
                 text += "}\n"
@@ -1861,22 +1864,22 @@ class ConvertBash {
 
     private handleParameterCase(str: any): string {
         let text = ""
-        if ((str.length>1) && (str.indexOf("^^") == (str.length - 2))) {
+        if ((str.length > 1) && (str.indexOf("^^") != -1) && (str.indexOf("^^") == (str.length - 2))) {
             str = str.substring(0, str.length - 2)
             text = "get_env(\"" + str + "\")";
             text = "upper(" + text + ")"
         }
-        else if ((str.length > 0) && (str.indexOf("^") == (str.length - 1))) {
+        else if ((str.length > 0) && (str.indexOf("^") != -1) && (str.indexOf("^") == (str.length - 1))) {
             str = str.substring(0, str.length - 1)
             text = "get_env(\"" + str + "\")";
             text = "uppercapitalize(" + text + ")"
         }
-        else if ((str.length > 1) && (str.indexOf(",,") == (str.length - 2))) {
+        else if ((str.length > 1) && (str.indexOf(",,") != -1) && (str.indexOf(",,") == (str.length - 2))) {
             str = str.substring(0, str.length - 2)
             text = "get_env(\"" + str + "\")";
             text = "lower(" + text + ")"
         }
-        else if ((str.length > 0) && (str.indexOf(",") == (str.length - 1))) {
+        else if ((str.length > 0) && (str.indexOf(",") != -1) && (str.indexOf(",") == (str.length - 1))) {
             str = str.substring(0, str.length - 1)
             text = "get_env(\"" + str + "\")";
             text = "lowercapitalize(" + text + ")"
