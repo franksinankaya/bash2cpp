@@ -2124,7 +2124,7 @@ class ConvertBash {
             return env ? env[0] == '\\0' : true; \n\
         }\n\
         \n\
-        const std::string set_env(const char *cmd, const std::string &value) { \n\
+        const char *set_env(const char *cmd, const std::string &value) { \n\
             if (value.back() == '\\n')\n\
                 setenv(cmd, value.substr(0, value.size()-1).c_str(), 1);\n\
             else \n\
@@ -2132,16 +2132,16 @@ class ConvertBash {
             return \"\";\n\
         }\n\
         \n\
-        const std::string set_env(const char *cmd, const char *value) { \n\
+        const char *set_env(const char *cmd, const char *value) { \n\
             setenv(cmd, value, 1);\n\
             return \"\";\n\
         }\n\
         \n\
-        const std::string set_env(const char *cmd, const float value) { \n\
+        const char *set_env(const char *cmd, const float value) { \n\
             setenv(cmd, std::to_string(value).c_str(), 1);\n\
             return \"\";\n\        }\n\
         \n\
-        const std::string set_env(const char *cmd, const int value) { \n\
+        const char *set_env(const char *cmd, const int value) { \n\
             setenv(cmd, std::to_string(value).c_str(), 1);\n\
             return \"\";\n\
         }\n\
@@ -2266,7 +2266,7 @@ void execcommand(const std::string &cmd, int & exitstatus, std::string &result, 
         }\n"
 
         const splitCommand = "\n\
-        void split(std::vector <std::string> &tokens, const std::string &str, std::string delimiter)\n\
+        void split(std::vector <std::string> &tokens, const std::string &str, const std::string &delimiter)\n\
         {\n\
             // Vector of string to save tokens  \n\
             size_t pos = 0; \n\
@@ -2545,7 +2545,7 @@ std::streambuf *backupout = std::cout.rdbuf();\n\
 		m_released = true;\n\
 	}\n\
 \n\
-	void writecin(std::string str) {\n\
+	void writecin(const std::string &str) {\n\
 		write(readfd[1], str.data(), str.size());\n\
 		close(readfd[1]);\n\
 	}\n\
