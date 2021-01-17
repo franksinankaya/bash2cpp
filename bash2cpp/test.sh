@@ -1,7 +1,8 @@
 #!/bin/bash
 
 declare -a arr=(
-					 "for4.sh"
+					"for5.sh"
+					"for4.sh"
 					"echo4.sh"
 					"showsize.sh"
 					# "upper.sh"

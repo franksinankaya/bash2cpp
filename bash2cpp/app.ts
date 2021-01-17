@@ -1386,6 +1386,15 @@ class ConvertBash {
         let text = ""
         let i
 
+        if (command.paren) {
+            text += "for ( ; ; )"
+            text += "{\n"
+            //text += "set_env(\"" + command.name.text + "\", vals[i]);\n"
+            const cmds = this.convertCommand(command.do);
+            text += cmds + ";\n";
+            text += "};\n"
+            return text;
+        }
         if (command.clause) {
             let text = ""
             if (command.clause.commands[0].type == "Subshell") {
@@ -1456,7 +1465,7 @@ class ConvertBash {
         }
 
         text += "{\n"
-        text += "std::string clause = " + clause + ";\n"
+        text += "const std::string clause( " + clause + ");\n"
 
         for (let i = 0; i < command.cases.length; i++) {
             const body = command.cases[i].body ? this.convertCommand(command.cases[i].body) : ""
@@ -1601,6 +1610,8 @@ class ConvertBash {
                 }
             case 'read':
                 return "readval(" + suffixprocessed + ")"
+            case ':':
+                return ""
             case 'echo':
                 {
                     let text = ""
