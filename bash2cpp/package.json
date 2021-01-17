@@ -23,7 +23,7 @@
   "scripts": {
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-	"test": "./test.sh"
+    "test": "./test.sh"
   },
   "devDependencies": {
     "@types/node": "^8.10.66",
