@@ -16,7 +16,7 @@ bash2cpp is not a complete translator but does a good job for simple scripts.
 * cd bash2cpp
 * cd bash2cpp/bashparser
 * npm install --save-dev
-* rpm run build
+* npm run build
 * cd ..
 * npm install --save-dev typescript
 * npm install
