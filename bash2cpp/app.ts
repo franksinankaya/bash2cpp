@@ -2454,7 +2454,7 @@ void execcommand(const std::string &cmd, int & exitstatus, std::string &result, 
         }\n"
 
         let text = ""
-        text += "template<typename T> void processargs(T &list)\n"
+        text += "void processargs(std::initializer_list<std::string> &list)\n"
         text += "{\n"
         text += "    int i = 0;\n"
         text += "    std::string combinedargs;\n"
@@ -2644,11 +2644,19 @@ try {
         .join(';\n')
 
     let argstr = "void convertMainArgs(int argc, const char *argv[]){\n"
-    argstr += "std::vector<std::string> args;\n"
+    argstr += "if (argc > 1) set_env(\"#\", argc - 1);\n"
+    argstr += "else  set_env(\"#\", \"0\");\n"
+    argstr += "std::string combinedargs;\n"
     argstr += "for (int i = 1; i < argc; i++) {\n"
-    argstr += "args.push_back(std::string(argv[i]));\n"
+    argstr += "set_env(std::to_string(i).c_str(), argv[i]);\n"
+    argstr += "combinedargs += std::string(argv[i]);\n"
+    argstr += "if (i != (argc - 1)) combinedargs += \" \";\n"
     argstr += "}\n"
-    argstr += "processargs(args);\n"
+    argstr += "if (combinedargs.size() == 0) combinedargs = \" \";\n"
+    argstr += "set_env(\"@\", combinedargs);\n"
+    argstr += "for (int i = argc; i < 11; i++) {\n"
+    argstr += "set_env(std::to_string(i).c_str(), \" \");\n"
+    argstr += "}\n"
     argstr += "}\n"
 
     str = "#include <stdlib.h> \n" +
