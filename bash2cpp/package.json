@@ -1,14 +1,29 @@
 {
-  "name": "bashconverter",
-  "version": "0.0.0",
-  "description": "bashconverter",
+  "name": "bash2cpp",
+  "version": "1.0.0",
+  "description": "Converts bash script to C++ code. Useful for simple shell scripts that can be converted to C++ for speed",
   "main": "app.js",
-  "author": {
-    "name": ""
+  "author": "Sinan Kaya",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/franksinankaya/bash2cpp/issues"
   },
+  "keywords": [
+    "linux",
+    "bash",
+    "converter",
+    "cpp",
+    "codegenerator"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/franksinankaya/bash2cpp.git"
+  },
+  "homepage": "https://github.com/franksinankaya/bash2cpp#readme",
   "scripts": {
     "build": "tsc --build",
-    "clean": "tsc --build --clean"
+    "clean": "tsc --build --clean",
+	"test": "./test.sh"
   },
   "devDependencies": {
     "@types/node": "^8.10.66",

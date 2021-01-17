@@ -6,6 +6,7 @@
 bash2cpp/a.out
 bash2cpp/out0.txt
 bash2cpp/out1.txt
+bash2cpp/package-lock.json
 
 # User-specific files
 *.rsuser

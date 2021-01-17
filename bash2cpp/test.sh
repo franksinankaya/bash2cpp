@@ -1,66 +1,120 @@
 #!/bin/bash
 
-declare -a arr=(
-					"for5.sh"
-					"for4.sh"
-					"echo4.sh"
-					"showsize.sh"
-					# "upper.sh"
-					"echo3.sh"
-					# "functions2.sh"
-					"lower0.sh"
-					"upper0.sh"
-					#"catinput.sh"
-					#"substring.sh"
-					"echo2.sh"
-					"special.sh"
-					# "regex.sh"
-					# "split.sh"
-					# "dirname.sh"
-					# "replacement.sh"
-					# "default.sh"
-					"functions1.sh"
-					"arguments.sh 1 2 3"
-					"arguments.sh 1"
-					"arguments.sh"
-					"for2.sh"
-					"tildaexpansion.sh"
-					"echo1.sh"
-					"redirection0.sh"
-					"while0.sh"
-					"for0.sh"
-					"braceexpansion.sh"
-					"redirection.sh"
-					"pipeline.sh"
-					"hostname0.sh"
-					"if9.sh"
-					"redirect.sh"
-					"while0.sh"
-					"if3.sh"
-					# "expansions.sh"
-					# "for1.sh"
-					"if0.sh"
-					"case0.sh"
-					"arithmetic.sh"
-					# "if7.sh"
-					# "array.sh"
-					"while.sh"
-					"if8.sh"
-					"parameterexpansion.sh"
-					"var1.sh"
-					# "for.sh"
-					"var0.sh"
-					"until.sh"
-					"conditionals.sh"
-					"stringconcat.sh"
-					"if6.sh"
-					"if5.sh"
-					"if4.sh"
-					"if2.sh"
-					"if1.sh"
-				)
+declare -a buildonly=(
+# banner.sh
+# logic.sh
+# populate-volatile.sh
+# checkroot.sh
+"for3.sh"
+"urandom"
+"logic.sh"
+"read-only-rootfs-hook.sh"
+"hostname.sh"
+"if.sh"
+"functions"
+"dmesg.sh"
+"mountnfs.sh"
+"redirect.sh"
+"umountnfs.sh"
+"while0.sh"
+"read.sh"
+"variables.sh"
+"redirection.sh"
+"functions0.sh"
+"case.sh"
+"if7.sh"
+"for.sh"
+"alignment.sh"
+"bootmisc.sh"
+"checkfs.sh"
+"devpts.sh"
+"halt"
+"mountall.sh"
+"reboot"
+"rmnologin.sh"
+"save-rtc.sh"
+"sendsigs"
+"single"
+"sushell"
+"sysfs.sh"
+"umountfs"
+)
+
+declare -a buildandexec=(
+"for5.sh"
+"for4.sh"
+"echo4.sh"
+"showsize.sh"
+# "upper.sh"
+"echo3.sh"
+# "functions2.sh"
+"lower0.sh"
+"upper0.sh"
+#"catinput.sh"
+#"substring.sh"
+"echo2.sh"
+"special.sh"
+# "regex.sh"
+# "split.sh"
+# "dirname.sh"
+# "replacement.sh"
+# "default.sh"
+"functions1.sh"
+"arguments.sh 1 2 3"
+"arguments.sh 1"
+"arguments.sh"
+"for2.sh"
+"tildaexpansion.sh"
+"echo1.sh"
+"redirection0.sh"
+"while0.sh"
+"for0.sh"
+"braceexpansion.sh"
+"redirection.sh"
+"pipeline.sh"
+"hostname0.sh"
+"if9.sh"
+"redirect.sh"
+"while0.sh"
+"if3.sh"
+# "expansions.sh"
+# "for1.sh"
+"if0.sh"
+"case0.sh"
+"arithmetic.sh"
+# "if7.sh"
+# "array.sh"
+"while.sh"
+"if8.sh"
+"parameterexpansion.sh"
+"var1.sh"
+# "for.sh"
+"var0.sh"
+"until.sh"
+"conditionals.sh"
+"stringconcat.sh"
+"if6.sh"
+"if5.sh"
+"if4.sh"
+"if2.sh"
+"if1.sh"
+)
 
 mkdir -p gen
+
+do_buildtest()
+(
+	stringarray=($1)
+	bashargs="${stringarray[@]:1}"
+	f=$(echo "${stringarray[0]}" | cut -f 1 -d '.')
+	node app.js tests/${stringarray[0]} gen/$f.cpp
+	if [ "$?" -ne 0 ]; then
+		exit -1
+	fi
+
+	g++ gen/$f.cpp -o gen/$f -g $3 -fno-exceptions -lpcre -std=c++17
+	echo "$1"
+)
 
 do_test()
 (
@@ -130,7 +184,7 @@ do_looptest()
 
 if [ "$#" -eq 1 ]; then
 	if [ $1 == "-b" ]; then
-		for filename in "${arr[@]}"
+		for filename in "${buildandexec[@]}"
 		do
 			do_looptest $filename 100 "-O3"
 		done
@@ -148,7 +202,15 @@ if [ "$#" -eq 2 ]; then
 fi
 
 ## now loop through the above array
-for filename in "${arr[@]}"
+for filename in "${buildonly[@]}"
+do
+	do_buildtest "$filename" 1 "-O3"
+	if [ $? -ne 0 ]; then
+		exit $?
+	fi
+done
+
+for filename in "${buildandexec[@]}"
 do
 	do_looptest "$filename" 1 "-O3"
 	if [ $? -ne 0 ]; then
