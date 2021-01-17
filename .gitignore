@@ -3,10 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-bash2cpp/a.out
-bash2cpp/out0.txt
-bash2cpp/out1.txt
-bash2cpp/package-lock.json
+a.out
+out0.txt
+out1.txt
+package-lock.json
 
 # User-specific files
 *.rsuser
@@ -346,4 +346,4 @@ ASALocalRun/
 # BeatPulse healthcheck temp database
 healthchecksdb
 
-bash2cpp/gen
+gen
