@@ -42,7 +42,7 @@ class ConvertBash {
         }
         else if (arithmeticAST.left.type == "Identifier") {
             leftvalue = this.getIdentifier(expression, arithmeticAST.left)
-            leftvalue = "mystoi(" + leftvalue + ", 0)"
+            leftvalue = "mystoiz(" + leftvalue + ")"
         }
         else {
             this.terminate(expression)
@@ -53,7 +53,7 @@ class ConvertBash {
         }
         else if (arithmeticAST.right.type == "Identifier") {
             rightvalue = this.getIdentifier(expression, arithmeticAST.right)
-            rightvalue = "mystoi(" + rightvalue + ", 0)"
+            rightvalue = "mystoiz(" + rightvalue + ")"
         }
         else {
             this.terminate(expression)
@@ -104,7 +104,7 @@ class ConvertBash {
             let leftstoi = ""
             if (arithmeticAST.left.type == "Identifier") {
                 leftvalue = "\"" + arithmeticAST.left.name + "\""
-                leftstoi = "mystoi(" + this.getIdentifier(expression, arithmeticAST.left) + ", 0)"
+                leftstoi = "mystoiz(" + this.getIdentifier(expression, arithmeticAST.left) + ")"
             }
             else {
                 this.terminate(expression)
@@ -115,7 +115,7 @@ class ConvertBash {
             }
             else if (arithmeticAST.right.type == "Identifier") {
                 rightvalue = this.getIdentifier(expression, arithmeticAST.right)
-                rightvalue = "mystoi(" + rightvalue + ", 0)"
+                rightvalue = "mystoiz(" + rightvalue + ")"
             }
             else if (arithmeticAST.right.type == "BinaryExpression") {
                 rightvalue = this.convertArithmeticASTBinaryExpression(arithmeticAST.right, expression)
@@ -1378,6 +1378,29 @@ class ConvertBash {
         return [text, countstr]
     }
 
+    public extractForParam(left: any): string {
+        let lefttext = ""
+        if (left.prefix) lefttext += left.prefix[0].text
+        if (left.name) lefttext += left.name.text
+        if (left.suffix) {
+            for (let v = 0; v < left.suffix.length; v++) {
+                if (left.suffix[v].type == "Redirect") {
+                    lefttext += left.suffix[v].op.text + left.suffix[v].file.text
+                    continue
+                }
+                let t = left.suffix[v].text
+                if ((left.suffix[v].type == "Word") && (left.suffix[v].expansion)) {
+                    if (left.suffix[v].expansion[0].type == "ParameterExpansion") {
+                        let strbegin = t.substring(0, left.suffix[v].expansion[0].loc.start);
+                        let strend = t.substring(left.suffix[v].expansion[0].loc.end + 1, t.length);
+                        t = strbegin + "$" + left.suffix[v].expansion[0].parameter + strend
+                    }
+                }
+                lefttext += t
+            }
+        }
+        return lefttext
+    }
     public convertFor(command: any): string {
         let text = ""
         let i
@@ -1401,16 +1424,17 @@ class ConvertBash {
                 const left = command.clause.commands[0].list.commands[0].list.commands[0]
                 const mid = command.clause.commands[0].list.commands[0].list.commands[1]
                 const right = command.clause.commands[0].list.commands[0].list.commands[2]
-                let lefttext = left.prefix[0].text
+                let lefttext = this.extractForParam(left)
                 try {
                     let arithmeticAST
                     arithmeticAST = babylon.parse(lefttext);
-                    lefttext = this.convertArithmeticExpansion(left, left.prefix[0].text, arithmeticAST.program.body[0].expression)
+                    lefttext = this.convertArithmeticExpansion(left, lefttext, arithmeticAST.program.body[0].expression)
                 } catch (err) {
                     throw new SyntaxError(`Cannot parse arithmetic expression "${lefttext}": ${err.message}`);
                 }                
 
-                let midtext = mid.name.text + mid.suffix[0].op.text + mid.suffix[0].file.text
+                //let midtext = mid.name.text + mid.suffix[0].op.text + mid.suffix[0].file.text
+                let midtext = this.extractForParam(mid)
                 try {
                     let arithmeticAST
                     arithmeticAST = babylon.parse(midtext);
@@ -1419,7 +1443,7 @@ class ConvertBash {
                     throw new SyntaxError(`Cannot parse arithmetic expression "${midtext}": ${err.message}`);
                 }
 
-                let righttext = right.name.text
+                let righttext = this.extractForParam(right)
                 try {
                     let arithmeticAST
                     arithmeticAST = babylon.parse(righttext);
@@ -2152,6 +2176,9 @@ class ConvertBash {
         const int mystoi(const std::string &str, int defreturn = -1) { \n\
             if (!str.empty()) return std::stoi(str); \n\
             return defreturn; \n\
+        }\n\
+        const int mystoiz(const std::string &str) { \n\
+            return mystoi(str, 0);\n\
         }\n\
         \n\
         const std::string get_env(const std::string &cmd) { \n\
