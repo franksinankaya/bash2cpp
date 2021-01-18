@@ -1827,6 +1827,11 @@ class ConvertBash {
         this.terminate(command)
     }
 
+    public convertArray(command: any): string {
+        let text = command.items.map(c => this.convertCommand(c)).join(' ');
+        let cmd = command.text.split('=')[0]
+        return "set_env(\"" + cmd + "\", \"" + text + "\")"
+    }
     public convertPipeline(command: any, stdout : any = true): string {
         let text = ""
         let currentlength = this.pipelines.length
@@ -1930,6 +1935,12 @@ class ConvertBash {
                     return "get_env(\"" + command.parameter + "\").substr(" + offset + ",  std::string::npos)";
                 }
             }
+            if (typeof command.parameter != "number") {
+                if (command.parameter && (command.parameter.indexOf("[@]") >= 0)) {
+                    return "get_env(\"" + this.replaceAll(command.parameter, "[@]", "") + "\")"
+                }
+            }
+
             return this.handleParameterCase(command.parameter)
         }
         else {
@@ -1980,6 +1991,8 @@ class ConvertBash {
                 return this.convertIoNumber(command);
             case 'Pipeline':
                 return this.convertPipeline(command);
+            case 'Array':
+                return this.convertArray(command);
         }
         this.terminate(command)
     }

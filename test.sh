@@ -1,7 +1,5 @@
 #!/bin/bash
 
-ls -la bash-parser/
-
 declare -a buildonly=(
 # banner.sh
 # logic.sh
@@ -43,6 +41,7 @@ declare -a buildonly=(
 )
 
 declare -a buildandexec=(
+"for7.sh"
 "for5.sh"
 "for4.sh"
 "echo4.sh"

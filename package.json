@@ -21,13 +21,21 @@
   },
   "homepage": "https://github.com/franksinankaya/bash2cpp#readme",
   "scripts": {
+    "prebuild": "mgb bash-parser/src/modes posix && mgb bash-parser/src/modes bash && mgb bash-parser/src/modes word-expansion",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
     "test": "bash test.sh"
   },
   "devDependencies": {
     "@types/node": "^8.10.66",
-    "typescript": "^3.9.7"
+    "ava": "^3.15.0",
+    "coveralls": "^3.1.0",
+    "doctoc": "^1.2.0",
+    "json5": "^0.5.0",
+    "mode-grammar-builder": "^0.6.0",
+    "nyc": "^15.1.0",
+    "typescript": "^3.9.7",
+    "xo": "^0.37.1"
   },
   "dependencies": {
     "array-last": "^1.1.1",

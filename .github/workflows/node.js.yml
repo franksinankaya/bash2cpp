@@ -33,7 +33,9 @@ jobs:
           git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     - run: npm cache clean -f
     - run: rm -rf node_modules
+    - run: cd ..
     - run: npm i
+    - run: npm i --save-dev
+    - run: npm run prebuild --if-present
     - run: npm run build --if-present
-    - run: cd bash-parser && rm -rf node_modules && npm install --save && npm run build && cd ..
     - run: npm test
