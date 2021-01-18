@@ -826,13 +826,32 @@ class ConvertBash {
 
         return [strbegin, strend]
     }
+
+
+    private numExpansions(command: any): number {
+        let numexpansions = 0
+        if (command.expansion) {
+            let text = command.text
+            const expansions = []
+            for (let i = command.expansion.length - 1; i >= 0; i--) {
+                if (command.expansion[i]) {
+                    const expansion = this.convertCommand(command.expansion[i]);
+                    if (expansion != "") {
+                        expansions[i] = true
+                        numexpansions++
+                    }
+                }
+            }
+        }
+        return numexpansions
+    }
     /*
      * Array<ArithmeticExpansion |
 	 *				 CommandExpansion |
 	 *				 ParameterExpansion>
      */
     private convertWord(command: any): string {
-        if (command.expansion) {
+        if (command.expansion && this.numExpansions(command)) {
             let strbegin = ""
             let strend = ""
             let text = command.text
