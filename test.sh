@@ -109,7 +109,7 @@ do_buildtest()
 	stringarray=($1)
 	bashargs="${stringarray[@]:1}"
 	f=$(echo "${stringarray[0]}" | cut -f 1 -d '.')
-	node app.js tests/${stringarray[0]} gen/$f.cpp
+	node app.js tests/${stringarray[0]} gen/$f.cpp gen/$f.log
 	if [ "$?" -ne 0 ]; then
 		exit -1
 	fi
@@ -123,7 +123,7 @@ do_test()
 	stringarray=($1)
 	bashargs="${stringarray[@]:1}"
 	f=$(echo "${stringarray[0]}" | cut -f 1 -d '.')
-	node app.js tests/${stringarray[0]} gen/$f.cpp
+	node app.js tests/${stringarray[0]} gen/$f.cpp gen/$f.log
 	if [ "$?" -ne 0 ]; then
 		exit -1
 	fi

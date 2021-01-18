@@ -2717,4 +2717,11 @@ fs.writeFileSync(process.argv[3], str, function (err) {
     console.log('Saved!');
 });
 
+if (process.argv[4]) {
+    fs.writeFileSync(process.argv[4], JSON.stringify(ast), function (err) {
+        if (err) throw err;
+        console.log('Saved!');
+    });
+}
+
 process.exit(0);
