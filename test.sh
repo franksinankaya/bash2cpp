@@ -198,7 +198,7 @@ if [ "$#" -eq 1 ]; then
 fi
 
 if [ "$#" -eq 2 ]; then
-	echo "count is $2"
+	# echo "count is $2"
 	do_looptest $1 $2 "-O3"
 	exit 0
 fi
