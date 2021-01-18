@@ -6,7 +6,6 @@
 a.out
 out0.txt
 out1.txt
-package-lock.json
 
 # User-specific files
 *.rsuser

@@ -1,9 +1,11 @@
 #!/bin/bash
 
+ls -la bash-parser/
+
 declare -a buildonly=(
 # banner.sh
 # logic.sh
-# populate-volatile.sh
+# "populate-volatile.sh"
 # checkroot.sh
 "for3.sh"
 "urandom"

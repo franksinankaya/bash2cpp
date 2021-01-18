@@ -1,4 +1,5 @@
 # INTRODUCTION
+
 bash2cpp converts simple bash scripts to c++ code.
 It requires c++17 for file IO and expects c++ code to run in Linux.
 Though, with some effort Linux dependency can be removed but this is not
@@ -9,6 +10,10 @@ Reasons why you may want to try bash2cpp are:
 2. Code obfiscuation to prevent modification.
 
 bash2cpp is not a complete translator but does a good job for simple scripts.
+
+![CodeQL](https://github.com/franksinankaya/bash2cpp/workflows/CodeQL/badge.svg)
+
+![Node.js CI](https://github.com/franksinankaya/bash2cpp/workflows/Node.js%20CI/badge.svg)
 
 # INSTALLATION
 * git submodule init

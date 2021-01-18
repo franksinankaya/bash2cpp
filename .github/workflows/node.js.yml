@@ -25,8 +25,15 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+    - name: Checkout submodules
+      shell: bash
+      run: |
+          auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+          git submodule sync --recursive
+          git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
     - run: npm cache clean -f
     - run: rm -rf node_modules
     - run: npm i
     - run: npm run build --if-present
+    - run: cd bash-parser && rm -rf node_modules && npm install --save && npm run build && cd ..
     - run: npm test
