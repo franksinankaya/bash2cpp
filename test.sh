@@ -41,6 +41,8 @@ declare -a buildonly=(
 )
 
 declare -a buildandexec=(
+"array0.sh"
+"array.sh"
 "for7.sh"
 "for5.sh"
 "for4.sh"
@@ -84,7 +86,6 @@ declare -a buildandexec=(
 "case0.sh"
 "arithmetic.sh"
 # "if7.sh"
-# "array.sh"
 "while.sh"
 "if8.sh"
 "parameterexpansion.sh"

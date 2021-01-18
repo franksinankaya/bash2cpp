@@ -1937,7 +1937,25 @@ class ConvertBash {
             }
             if (typeof command.parameter != "number") {
                 if (command.parameter && (command.parameter.indexOf("[@]") >= 0)) {
-                    return "get_env(\"" + this.replaceAll(command.parameter, "[@]", "") + "\")"
+                    if (command.parameter.indexOf("#") == 0) {
+                        let prm = command.parameter
+                        prm = prm.substring(1)
+                        return "std::to_string(split(get_env(\"" + this.replaceAll(prm, "[@]", "") + "\")).size())"
+                    }
+                    else
+                        return "get_env(\"" + this.replaceAll(command.parameter, "[@]", "") + "\")"
+                }
+                if (command.parameter && (command.parameter.indexOf("[") >= 0) && (command.parameter.indexOf("]") >= 0)) {
+                    let leftbracket = command.parameter.indexOf("[")
+                    let rightbracket = command.parameter.indexOf("]")
+                    if (leftbracket < rightbracket) {
+                        let index = command.parameter.substring(leftbracket + 1, rightbracket)
+                        let noindexprm = this.replaceAll(command.parameter, "[" + index + "]", "")
+                        if (index != "*")
+                            return "split(get_env(\"" + noindexprm + "\"))[" + index + "]"
+                        else
+                            return "ifscombine(split(get_env(\"" + noindexprm + "\"), false))"
+                    }
                 }
             }
 
@@ -2312,11 +2330,11 @@ void execcommand(const std::string &cmd, int & exitstatus, std::string &result, 
             }\n\
         }\n\
         \n\
-        std::vector <std::string> split(const std::string &s) {\n\
+        std::vector <std::string> split(const std::string &s, bool ifs = true) {\n\
             std::string delim = \" \\t\\n\"; \n\
             std::vector <std::string> elems;\n\
             const char *userdelim = getenv(\"IFS\");\n\
-            if (userdelim != NULL)\n\
+            if ((userdelim != NULL) && ifs)\n\
             {\n\
                 delim = userdelim;\n\
             }\n\
@@ -2417,6 +2435,17 @@ void execcommand(const std::string &cmd, int & exitstatus, std::string &result, 
             }\n\
         }\n\
         \n\
+        std::string ifscombine(const std::vector<std::string> vec)\n\
+        {\n\
+            const std::string separator = get_env(\"IFS\");\n\
+            std::string str = \"\";\n\
+            for (int i = 0; i < vec.size(); i++) {\n\
+                str = str + vec[i];\n\
+                if (i != (vec.size() - 1))\n\
+                    str += separator;\n\
+            }\n\
+            return (str); \n\
+        }\n\
         void echo(const std::string &str)\n\
         {\n\
             echov(str); \n\
@@ -2703,6 +2732,7 @@ try {
         "#include <sys/wait.h>\n" +
         "#include <fcntl.h>\n" +
         "#include <fstream>\n" +
+        "#include <numeric>\n" +
         "#include <wordexp.h>\n" +
         "#define PIPE_READ 0\n" +
         "#define PIPE_WRITE 1\n" +
