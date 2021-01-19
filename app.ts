@@ -24,13 +24,17 @@ class ConvertBash {
         throw new Error();
     }
 
-    private getIdentifier(expression:any, argument: any): string {
+    private getIdentifier(expression:any, argument: any, asenv: any = true): string {
         let str = expression.substring(argument.start, argument.end);
 
         if (str[0] == "$") {
             str = str.substring(1)
         }
-        const val = "get_env(\"" + str + "\")"
+        let val = ""
+        if (asenv)
+            val = "get_env(\"" + str + "\")"
+        else
+            val = str
         return val
     }
 
@@ -749,13 +753,13 @@ class ConvertBash {
         return this.convertStdRedirects(redirections, redirectindex, maintext)
     }
 
-    private convertOneFunction(name: any, body: any): string {
+    private convertOneFunction(name: any, body: any, maxargs:any): string {
         let text = ""
         if (name[0] == '"' && name[name.length - 1] == '"') {
             name = name.substring(1, name.length - 2)
         }
         text += "std::string " + name + "(std::initializer_list<std::string> list) {\n"
-        text += "processargs(list);\n"
+        text += "scopeparams prms" + name + "(list, " + parseInt(maxargs) + ");\n"
         text += "scopeexitcout scope;\n"
 
         text += body + "; \n"
@@ -765,8 +769,143 @@ class ConvertBash {
         return text
     }
 
+    private maxReferredArgsCmd(cmd: any, num: any): number {
+        for (let s = 0; cmd.suffix && (s < cmd.suffix.length); s++) {
+            let sfx = cmd.suffix[s]
+            for (let e = 0; sfx.expansion && (e < sfx.expansion.length); e++) {
+                let exp = sfx.expansion[e]
+                if (exp.parameter && (exp.parameter > num)) {
+                    num = exp.parameter
+                }
+            }
+        }
+        for (let p = 0; cmd.prefix && (p < cmd.prefix.length); p++) {
+            let pfx = cmd.prefix[p]
+            for (let e = 0; pfx.expansion && (e < pfx.expansion.length); e++) {
+                let exp = pfx.expansion[e]
+                if (exp.parameter && (exp.parameter > num)) {
+                    num = exp.parameter
+                }
+                if (exp.commandAST) {
+                    num = this.maxReferredArgs(exp.commandAST, num)
+                }
+                if (exp.arithmeticAST) {
+                    if (exp.arithmeticAST.left && (exp.arithmeticAST.left.type == "Identifier")) {
+                        let leftid = this.getIdentifier(exp.arithmeticAST.left.name, exp.arithmeticAST.left, false)
+                        if (this.isNumeric(leftid)) {
+                            if (Number(leftid) > num) {
+                                num = Number(leftid)
+                            }
+                        } else {
+                            let name = exp.arithmeticAST.left.name
+                            name = this.replaceAll(name, "$", "")
+                            if (this.isNumeric(name)) {
+                                if (Number(name) > num) {
+                                    num = Number(name)
+                                }
+                            }
+                        }
+                    }
+                    if (exp.arithmeticAST.right && (exp.arithmeticAST.right.type == "Identifier")) {
+                        let rightid = this.getIdentifier(exp.arithmeticAST.right.name, exp.arithmeticAST.right, false)
+                        if (this.isNumeric(rightid)) {
+                            if (Number(rightid) > num) {
+                                num = Number(rightid)
+                            }
+                        } else {
+                            let name = exp.arithmeticAST.right.name
+                            name = this.replaceAll(name, "$", "")
+                            if (this.isNumeric(name)) {
+                                if (Number(name) > num) {
+                                    num = Number(name)
+                                }
+                            }
+                        }
+                    }
+                    if (exp.arithmeticAST.argument && (exp.arithmeticAST.argument.type == "Identifier")) {
+                        let argid = this.getIdentifier(exp.arithmeticAST.argument.name, exp.arithmeticAST.argument, false)
+                        if (this.isNumeric(argid)) {
+                            if (Number(argid) > num) {
+                                num = Number(argid)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for (let p = 0; cmd.name && (p < cmd.name.length); p++) {
+            let nm = cmd.name[p]
+            for (let e = 0; nm.expansion && (e < nm.expansion.length); e++) {
+                let exp = nm.expansion[e]
+                if (exp.parameter && (exp.parameter > num)) {
+                    num = exp.parameter
+                }
+            }
+        }
+        return num
+    }
+
+    private traverseTree(cmd: any, maxargs: any) {
+        if (cmd.left)
+            return this.traverseTree(cmd.left, maxargs)
+        if (cmd.right)
+            return this.traverseTree(cmd.right, maxargs)
+
+        maxargs = this.maxReferredArgsCmd(cmd, maxargs)
+        if (cmd.do) {
+            maxargs = this.maxReferredArgs(cmd.do, maxargs)
+        }
+        if (cmd.subshell) {
+            maxargs = this.maxReferredArgs(cmd.subshell, maxargs)
+        }
+        if (cmd.else) {
+            maxargs = this.maxReferredArgs(cmd.else, maxargs)
+        }
+        if (cmd.then) {
+            maxargs = this.maxReferredArgs(cmd.then, maxargs)
+        }
+        if (cmd.clause) {
+            maxargs = this.maxReferredArgs(cmd.clause, maxargs)
+        }
+        if (cmd.list) {
+            maxargs = this.maxReferredArgs(cmd.list, maxargs)
+        }
+        if (cmd.body) {
+            maxargs = this.maxReferredArgs(cmd.body, maxargs)
+        }
+        if (cmd.cases) {
+            for (let v = 0; v < cmd.cases.length; v++)
+                maxargs = this.traverseTree(cmd.cases[v], maxargs)
+        }
+        if (cmd.wordlist) {
+            for (let v = 0; v < cmd.wordlist.length; v++)
+                maxargs = this.traverseTree(cmd.wordlist[v], maxargs)
+        }
+        if (cmd.redirections) {
+            for (let v = 0; v < cmd.redirections.length; v++)
+                maxargs = this.traverseTree(cmd.redirections[v], maxargs)
+        }
+        if (cmd.pattern) {
+            for (let v = 0; v < cmd.pattern.length; v++)
+                maxargs = this.traverseTree(cmd.pattern[v], maxargs)
+        }
+        return maxargs
+    }
+
+    public maxReferredArgs(command: any, maxargs: any): number {
+
+        for (let v = 0; command.commands && (v < command.commands.length); v++) {
+            let cmd = command.commands[v]
+            maxargs = this.traverseTree(cmd, maxargs)
+        }
+
+        return maxargs
+    }
+
     private convertFunction(command: any): string {
-        this.convertOneFunction(this.convertCommand(command.name), this.convertCommand(command.body))
+        let maxargs = 0
+        maxargs = this.maxReferredArgs(command.body, maxargs)
+        this.convertOneFunction(this.convertCommand(command.name), this.convertCommand(command.body), maxargs)
         let text = ""
         let currentlength = this.functiondefs.length
         for (let v = 0; v < this.functiondefs.length; v++) {
@@ -1607,6 +1746,37 @@ class ConvertBash {
         return command.commands.map(c => this.convertCommand(c)).join(';\n');
     }
 
+    public handleKnownFunctions(name: any, suffixarray: any) {
+        let sarray = suffixarray
+        let startindex = 0
+        if ((name.text == "!") && sarray.length > 0) {
+            name = suffixarray[0]
+            startindex = 1
+        }
+        for (let v = 0; v < this.functiondefs.length; v++) {
+            let func = this.functiondefs[v][0].name.text
+            if (func == name.text) {
+                let text = ""
+                let length = 0
+                if (sarray) {
+                    length = sarray.length
+                    for (let s = startindex; s < sarray.length; s++) {
+                        let suf = this.convertCommand(sarray[s])
+                        if (!sarray[s].expansion)
+                            suf = '"' + suf + '"'
+                        else if (sarray[s].expansion[0].type == "ArithmeticExpansion")
+                            suf = "std::to_string(" + suf + ")"
+
+                        text += suf
+                        if (s != (sarray.length - 1))
+                            text += ","
+                    }
+                }
+                return name.text + "({" + text + "})"
+            }
+        }
+        return ""
+    }
     public handleCommands(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any) {
         let nametext = this.convertCommand(name)
         if (nametext[0] == '"' && nametext[nametext.length - 1] == '"') {
@@ -1616,25 +1786,9 @@ class ConvertBash {
         if (name.expansion && name.expansion[0].loc.start >= 0) {
             nameexpanded = true
         }
-        for (let v = 0; v < this.functiondefs.length; v++) {
-            let func = this.functiondefs[v][0].name.text
-            if (func == name.text) {
-                let text = ""
-                let length = 0
-                if (suffixarray) {
-                    length = suffixarray.length
-                    for (let s = 0; s < suffixarray.length; s++) {
-                        let suf = this.convertCommand(suffixarray[s])
-                        if (!suffixarray[s].expansion)
-                            suf = '"' + suf + '"'
-                        text += suf
-                        if (s != (suffixarray.length - 1))
-                            text +=  ","
-                    }
-                }
-                return name.text + "({" + text + "})"
-            }
-        }
+        let t = this.handleKnownFunctions(name, suffixarray)
+        if (t)
+            return t
 
         switch (name.text) {
             case 'exit':
@@ -1874,8 +2028,12 @@ class ConvertBash {
                     return this.convertNonExecRedirects(command, t)
                 return t
             }
-            else
+            else {
+                let t = this.handleKnownFunctions(command.name, command.suffix)
+                if (t)
+                    return t
                 return suffix
+            }
         }
         if (command.type == "Pipeline") {
             return this.convertPipeline(command, stdout)
@@ -2088,7 +2246,9 @@ class ConvertBash {
             let text = ""
             for (let v = 0; v < this.functiondefs.length; v++) {
                 let command = this.functiondefs[v][0]
-                text += this.convertOneFunction(this.convertCommand(command.name),this.convertCommand(command.body))
+                let maxargs = 0
+                maxargs = this.maxReferredArgs(command.body, maxargs)
+                text += this.convertOneFunction(this.convertCommand(command.name), this.convertCommand(command.body), maxargs)
             }
             return text ? "\n\n" + text + "\n\n" : ""
         }
@@ -2586,7 +2746,19 @@ void execcommand(const std::string &cmd, int & exitstatus, std::string &result, 
         }\n"
 
         let text = ""
-        text += "void processargs(std::initializer_list<std::string> &list)\n"
+        text += "void restoreargs(std::vector<std::string> &list, int maxargs)\n"
+        text += "{\n"
+        text += "    for (int i = 0; i < maxargs; i++) {\n"
+        text += "        set_env(std::to_string(i + 1).c_str(), list[i]);\n"
+        text += "    }\n"
+        text += "}\n"
+        text += "void saveargs(std::vector<std::string> &list, int maxargs)\n"
+        text += "{\n"
+        text += "    for (int i = 0; i < maxargs; i++) {\n"
+        text += "        list.push_back(get_env(std::to_string(i + 1).c_str()));\n"
+        text += "    }\n"
+        text += "}\n"
+        text += "void processargs(std::initializer_list<std::string> &list, int maxargs)\n"
         text += "{\n"
         text += "    int i = 0;\n"
         text += "    std::string combinedargs;\n"
@@ -2598,7 +2770,7 @@ void execcommand(const std::string &cmd, int & exitstatus, std::string &result, 
         text += "        if (i != (list.size() - 1)) combinedargs += \" \";\n"
         text += "        i++;\n"
         text += "    }\n"
-        text += "    for (int i = (int)list.size() + 1; i < 11; i++) {\n"
+        text += "    for (int i = (int)list.size() + 1; i < (maxargs + 1); i++) {\n"
         text += "        set_env(std::to_string(i).c_str(), \" \");\n"
         text += "    }\n"
         text += "    if (combinedargs.size() == 0) combinedargs = \" \";\n"
@@ -2642,6 +2814,16 @@ void execcommand(const std::string &cmd, int & exitstatus, std::string &result, 
     "        if (m_redirectStream) std::cerr.rdbuf(m_redirectStream.rdbuf());\n" +
     "    }\n" +
     "    ~scopeexitcerrfile(){std::cerr.rdbuf(m_backup);}\n" +
+    "};\n" +
+    "class scopeparams{\n" +
+    "    int m_maxargs;\n" +
+    "    std::vector<std::string> m_vec;\n" +
+    "public:\n" +
+    "    scopeparams(std::initializer_list<std::string> &list, int maxargs): m_maxargs(maxargs) {\n" +
+    "        saveargs(m_vec, maxargs);\n" +
+    "        processargs(list, maxargs);\n" +
+    "    }\n" +
+    "    ~scopeparams(){restoreargs(m_vec, m_maxargs);}\n" +
     "};\n" +
     "class scopeexitcincout {\n\
     \n\
@@ -2775,10 +2957,14 @@ try {
         .filter((c: any) => !!c) // filter empty commands
         .join(';\n')
 
-    let argstr = "void convertMainArgs(int argc, const char *argv[]){\n"
+    let maxargs= 0
+    maxargs = converter.maxReferredArgs(ast, maxargs)
+
+    let argstr = "void convertMainArgs(int argc, const char *argv[], int maxargs){\n"
     argstr += "if (argc > 1) set_env(\"#\", argc - 1);\n"
     argstr += "else  set_env(\"#\", \"0\");\n"
     argstr += "std::string combinedargs;\n"
+    argstr += "set_env(\"0\", argv[0]);\n"
     argstr += "for (int i = 1; i < argc; i++) {\n"
     argstr += "set_env(std::to_string(i).c_str(), argv[i]);\n"
     argstr += "combinedargs += std::string(argv[i]);\n"
@@ -2786,7 +2972,7 @@ try {
     argstr += "}\n"
     argstr += "if (combinedargs.size() == 0) combinedargs = \" \";\n"
     argstr += "set_env(\"@\", combinedargs);\n"
-    argstr += "for (int i = argc; i < 11; i++) {\n"
+    argstr += "for (int i = argc; i < (maxargs + 1); i++) {\n"
     argstr += "set_env(std::to_string(i).c_str(), \" \");\n"
     argstr += "}\n"
     argstr += "}\n"
@@ -2820,7 +3006,7 @@ try {
         argstr +
         "\n" +
         "int main(int argc, const char *argv[]) {\n" +
-        "convertMainArgs(argc, argv);\n" + 
+        "convertMainArgs(argc, argv, " + maxargs.toString() + ");\n" + 
         parseresult +
         ";\n" +
         "return 0;\n" +

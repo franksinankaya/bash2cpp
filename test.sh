@@ -41,6 +41,7 @@ declare -a buildonly=(
 )
 
 declare -a buildandexec=(
+"functions3.sh"
 "array0.sh"
 "array.sh"
 "for7.sh"

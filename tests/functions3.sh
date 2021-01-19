@@ -7,8 +7,10 @@ in_func()
 # Return 0 on success and 1 on failure
 func()
 {
+	echo $1 $2
 	for ((i = ${1}; i <= ${2}; i++)); do
 		in_func ${1} $(($i - 1))
+		echo $1 $2
 	done
 }
 
