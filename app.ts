@@ -1765,10 +1765,12 @@ class ConvertBash {
 
                     if (issuesystem) {
                         let quoteparams = false
-                        if ((nametext == "printf") || (nametext == "echo"))
+                        if ((nametext == "printf") || (nametext == "echo")) {
                             quoteparams = true
-
-                        text += "," + quoteparams + ")"
+                            text += "," + quoteparams + ")"
+                        } else {
+                            text += ")"
+                        }
                     }
 
                     return text
