@@ -4,9 +4,8 @@ const file = readFileSync(process.argv[2], 'utf-8');
 const babylon = require('babylon');
 
 class ConvertBash {
-    private functiondefs: any = ""
+    private functiondefs: any = []
     private redirects: any = []
-    private functionnames: any = []
     private pipelines: any = []
     private lines: any
     private currentrowstart: any
@@ -767,9 +766,14 @@ class ConvertBash {
     }
 
     private convertFunction(command: any): string {
-        let text = this.convertOneFunction(this.convertCommand(command.name),this.convertCommand(command.body))
-        this.functiondefs += text
-        this.functionnames.push(this.convertCommand(command.name))
+        this.convertOneFunction(this.convertCommand(command.name), this.convertCommand(command.body))
+        let text = ""
+        let currentlength = this.functiondefs.length
+        for (let v = 0; v < this.functiondefs.length; v++) {
+            if (this.functiondefs[v][0] == command)
+                return ""
+        }
+        this.functiondefs.push([command, this.currentrowstart, this.currentrowend])
         return ""
     }
 
@@ -1122,8 +1126,15 @@ class ConvertBash {
             let file
             if (!redirections[index].file.expansion)
                 file = "\"" + this.convertCommand(redirections[index].file) + "\""
-            else
+            else {
                 file = this.convertCommand(redirections[index].file)
+                let locstart = redirections[index].file.expansion[0].loc.start
+                if (locstart > 0) {
+                    if ((file[0] != '"') && (redirections[index].file.text[0] != '"')){
+                        file = '"' + file
+                    }
+                }
+            }
 
             let numberIo = redirections[index].numberIo ? parseInt(redirections[index].numberIo.text) : 1
             if (redirections[index].op.text == ">") {
@@ -1605,8 +1616,8 @@ class ConvertBash {
         if (name.expansion && name.expansion[0].loc.start >= 0) {
             nameexpanded = true
         }
-        for (let v = 0; v < this.functionnames.length; v++) {
-            let func = this.functionnames[v]
+        for (let v = 0; v < this.functiondefs.length; v++) {
+            let func = this.functiondefs[v][0].name.text
             if (func == name.text) {
                 let text = ""
                 let length = 0
@@ -2060,11 +2071,28 @@ class ConvertBash {
         this.terminate(command)
     }
 
+    public getFunctionPrototypes(): string {
+        if (this.functiondefs) {
+            let text = ""
+            for (let v = 0; v < this.functiondefs.length; v++) {
+                let command = this.functiondefs[v][0]
+                text += "std::string " + this.convertCommand(command.name) + "(std::initializer_list<std::string> list);\n"
+            }
+            return text ? "\n\n" + text + "\n\n" : ""
+        }
+        return ""
+    }
+
     public getFunctionDefinitions(): string {
-        if (this.functiondefs)
-            return "\n\n" + this.functiondefs
-        else
-            return "\n"
+        if (this.functiondefs) {
+            let text = ""
+            for (let v = 0; v < this.functiondefs.length; v++) {
+                let command = this.functiondefs[v][0]
+                text += this.convertOneFunction(this.convertCommand(command.name),this.convertCommand(command.body))
+            }
+            return text ? "\n\n" + text + "\n\n" : ""
+        }
+        return ""
     }
 
     public getRedirectDefinitions(): string {
@@ -2085,7 +2113,7 @@ class ConvertBash {
                 text += "}\n"
                 text += "\n"
             }
-            return "\n\n" + text + "\n\n"
+            return text ? "\n\n" + text + "\n\n" : ""
         }
         return ""
     }
@@ -2120,7 +2148,7 @@ class ConvertBash {
                 text += "}\n"
                 text += "\n"
             }
-            return "\n\n" + text + "\n\n"
+            return text ? "\n\n" + text + "\n\n" : ""
         }
         else
             return "\n"
@@ -2787,6 +2815,7 @@ try {
         converter.getSupportDefinitions() +
         converter.getPipelineDefinitions() +
         converter.getRedirectDefinitions() +
+        converter.getFunctionPrototypes() +
         converter.getFunctionDefinitions() +
         argstr +
         "\n" +
