@@ -104,10 +104,7 @@ Review missing functionality list.
 * if [[ ( $username == "admin" && $password == "secret" ) ]] does not work
 * if (( var1 > var2 )) doesn't work
 * nested pipes over 2 level not supported
-* DB_AWS_ZONE=('us-east-2a' 'us-west-1a' 'eu-central-1a')  for zone in "${DB_AWS_ZONE[@]}"
 * . /etc/default/rcS
-* VALS=( 'five' 'four' 'three' 'two' 'one' ) for ITEM in "${VALS[@]}"; do
-* ${other:-default_value}
 * if [ -z ${VAR+x} ]; 
 * dmesg -s 131072 > gen/dmesg  doesn't work
 * echo {A..Z}{0..9} does not work

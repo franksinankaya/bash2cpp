@@ -41,6 +41,7 @@ declare -a buildonly=(
 )
 
 declare -a buildandexec=(
+"default0.sh"
 "functions3.sh"
 "array0.sh"
 "array.sh"
@@ -62,7 +63,6 @@ declare -a buildandexec=(
 # "split.sh"
 # "dirname.sh"
 # "replacement.sh"
-# "default.sh"
 "functions1.sh"
 "arguments.sh 1 2 3"
 "arguments.sh 1"

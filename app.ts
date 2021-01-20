@@ -978,7 +978,7 @@ class ConvertBash {
             const expansions = []
             for (let i = command.expansion.length - 1; i >= 0; i--) {
                 if (command.expansion[i]) {
-                    const expansion = this.convertCommand(command.expansion[i]);
+                    const expansion = this.convertCommand(command.expansion[i], command.text);
                     if (expansion != "") {
                         expansions[i] = true
                         numexpansions++
@@ -1003,7 +1003,7 @@ class ConvertBash {
             let curexpansions = 0
             for (let i = command.expansion.length - 1; i >= 0; i--) {
                 if (command.expansion[i]) {
-                    const expansion = this.convertCommand(command.expansion[i]);
+                    const expansion = this.convertCommand(command.expansion[i], command.text);
                     if (expansion != "") {
                         expansions[i] = true
                         numexpansions++
@@ -1094,7 +1094,7 @@ class ConvertBash {
             let laststrend = ""
             for (let i = command.expansion.length - 1; i >= 0; i--) {
                 if (command.expansion[i]) {
-                    const expansion = this.convertCommand(command.expansion[i]);
+                    const expansion = this.convertCommand(command.expansion[i], command.text);
                     if (expansion != "") {
                         strbegin = text.substring(0, expansionstarts[i]);
                         strend = text.substring(expansionends[i] + 1, text.length);
@@ -2109,7 +2109,7 @@ class ConvertBash {
         return text
     }
 
-    public convertParameterExpansion(command: any): string {
+    public convertParameterExpansion(command: any, uppertext: any): string {
         if (command.loc.start >= 0 && command.loc.end > 0) {
             if ((command.op) && (command.op == "caseChange")) {
                 if (command.globally == true) {
@@ -2128,7 +2128,7 @@ class ConvertBash {
                     return text
                 }
             }
-            if ((command.op) && (command.op == "substring")) {
+            if ((command.op) && (command.op == "substring") || (command.op == "assignDefaultValueIfUnset") || (command.op == "indicateErrorIfUnset")|| (command.op == "useDefaultValueIfUnset")|| (command.op == "useAlternativeValueIfUnset")) {
                 if (command.length) {
                     let length = command.length
                     let offset = command.offset
@@ -2143,6 +2143,52 @@ class ConvertBash {
                 }
                 else {
                     let offset = command.offset
+                    if (isNaN(offset)) {
+                        let offset = uppertext.indexOf(command.parameter)
+                        let ops = [":-", ":=", ":+", "+", ":?", "?", "-", "="]
+                        let op = ""
+                        for (let v = 0; v < ops.length; v++) {
+                            if (uppertext.indexOf(ops[v]) != -1) {
+                                op = ops[v]
+                                break;
+                            }
+                        }
+                        let altvalue = uppertext.substring(offset + command.parameter.length + op.length, command.loc.end)
+
+                        // ${VAR:=STRING}	If VAR is empty or unset, set the value of VAR to STRING.
+                        if (op == ":=")
+                            return "set_env_ifempty(\"" + command.parameter + "\",\"" + altvalue + "\")"
+
+                        // ${VAR=STRING}	If VAR is unset, set the value of VAR to STRING.
+                        if (op == "=")
+                            return "set_env_ifunset(\"" + command.parameter + "\",\"" + altvalue + "\")"
+
+                        // ${VAR:-STRING}	If VAR is empty or unset, use STRING as its value.
+                        if (op == ":-")
+                            return "envempty(\"" + command.parameter + "\") ? \"" + altvalue + "\" : get_env(\"" + command.parameter + "\")"
+
+                        // ${VAR-STRING}	If VAR is unset, use STRING as its value.
+                        if (op == "-")
+                            return "!envset(\"" + command.parameter + "\") ? \"" + altvalue + "\" : get_env(\"" + command.parameter + "\")"
+
+                        // ${VAR:+STRING}	If VAR is not empty, use STRING as its value.
+                        if (op == ":+")
+                            return "!envempty(\"" + command.parameter + "\") ? \"" + altvalue + "\" : \"\""
+
+                        // ${VAR+STRING}	If VAR is set, use STRING as its value.
+                        if (op == "+")
+                            return "envset(\"" + command.parameter + "\") ? \"" + altvalue + "\" : \"\""
+
+                        // ${VAR:?STRING}	Display an error if empty or unset.
+                        if (op == ":?")
+                            return "envempty(\"" + command.parameter + "\") ? \"" + "value unset" + "\" : \"\""
+
+                        // ${VAR?STRING}	Display an error if unset.
+                        if (op == "?")
+                            return "!envset(\"" + command.parameter + "\") ? \"" + "value unset" + "\" : \"\""
+
+                        this.terminate(command)
+                    }
                     if (offset < 0)
                         offset = "get_env(\"" + command.parameter + "\").size() " + offset
 
@@ -2180,7 +2226,7 @@ class ConvertBash {
         }
     }
 
-    public convertCommand(command: any): string {
+    public convertCommand(command: any, uppertext: any = ""): string {
         if (command.loc && command.loc.start && command.loc.start.row) {
             this.currentrowstart = command.loc.start
             this.currentrowend = command.loc.end
@@ -2193,7 +2239,7 @@ class ConvertBash {
             case 'If':
                 return this.convertIf(command);
             case 'ParameterExpansion':
-                return this.convertParameterExpansion(command);
+                return this.convertParameterExpansion(command, uppertext);
             case 'CommandExpansion':
                 return this.convertCommandExpansion(command);
             case 'Function':
@@ -2404,6 +2450,10 @@ class ConvertBash {
             char *env = getenv(cmd.c_str()); \n\
             return env ? env[0] == '\\0' : true; \n\
         }\n\
+        const int envset(const std::string &cmd) { \n\
+            char *env = getenv(cmd.c_str()); \n\
+            return env ? true : false; \n\
+        }\n\
         \n\
         const std::string set_env(const char *cmd, const std::string &value) { \n\
             if (value.back() == '\\n')\n\
@@ -2429,6 +2479,18 @@ class ConvertBash {
         \n\
         void set_env(const char *cmd, const char value) { \n\
             setenv(cmd, std::to_string(value).c_str(), 1);\n\
+        }\n\
+        const std::string set_env_ifunset(const std::string &cmd, const std::string &value) {\n\
+        \n\
+            char *env = getenv(cmd.c_str()); \n\
+            if (!env) { set_env(cmd.c_str(), value); return value; } \n\
+            return env;\n\
+        }\n\
+        const std::string set_env_ifempty(const std::string &cmd, const std::string &value) { \n\
+            char *env = getenv(cmd.c_str()); \n\
+            if (!env) { set_env(cmd.c_str(), value); return value;}\n\
+            if (envempty(cmd)) { set_env(cmd.c_str(), value); return value;}\n\
+            return env;\n\
         }\n"
 
         const execCommand = "\n\
