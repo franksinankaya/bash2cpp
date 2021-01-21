@@ -194,8 +194,10 @@ if [ "$#" -eq 1 ]; then
 
 		exit 0
 	fi
+	if [ $1 != "-e" ]; then
 	do_looptest $1 1 "-O0" -g
 	exit 0
+	fi
 fi
 
 if [ "$#" -eq 2 ]; then
@@ -204,14 +206,16 @@ if [ "$#" -eq 2 ]; then
 	exit 0
 fi
 
-## now loop through the above array
-for filename in "${buildonly[@]}"
-do
-	do_buildtest "$filename" 1 "-O3"
-	if [ $? -ne 0 ]; then
-		exit $?
-	fi
-done
+if [ $1 != "-e" ]; then
+	## now loop through the above array
+	for filename in "${buildonly[@]}"
+	do
+		do_buildtest "$filename" 1 "-O3"
+		if [ $? -ne 0 ]; then
+			exit $?
+		fi
+	done
+fi
 
 for filename in "${buildandexec[@]}"
 do
