@@ -89,16 +89,16 @@ done
 # each line is echoed back to stdout.
 
 # Parse error on line 92: Unexpected 'OPEN_PAREN'
-# for (( counter=100; counter>=1; counter-- ));
-# do 
-# echo $counter
-# done
+for (( counter=100; counter>=1; counter-- ));
+do 
+echo $counter
+done
 
 # Parse error on line 92: Unexpected 'OPEN_PAREN'
-# LIMIT=5
-# for (( IDX = 1; IDX <= $LIMIT; IDX++ )); do
-  # echo "count: $IDX"
-# done
+LIMIT=5
+for (( IDX = 1; IDX <= $LIMIT; IDX++ )); do
+  echo "count: $IDX"
+done
 
 
 START=10
@@ -118,18 +118,18 @@ for ITEM in $( seq $START $END ); do
 done
 
 # Parse error on line 92: Unexpected 'OPEN_PAREN'
-# VALS=( 'five' 'four' 'three' 'two' 'one' )
+VALS=( 'five' 'four' 'three' 'two' 'one' )
 
 # A For loop that iterates through a formal array. Note the [@] referend
 # in ITEMS, this is represents *every* entry in the array, much like $@
 # represents the entirety of the command line arguments. Also note that
 # there can be no spaces between the array variable and the curly braces
 # that surround it within the quotes.
-# for ITEM in "${VALS[@]}"; do
+for ITEM in "${VALS[@]}"; do
 
-  # echo "value: $ITEM"
+  echo "value: $ITEM"
 
-# done
+done
 
 # bash prints on a single line
 # weekdays="Mon Tue Wed Thu Fri"
@@ -149,4 +149,14 @@ done
 # Echo range numbers
 for num in {1..10}; do
   echo ${num}
+done
+
+generate_list ()
+{
+  echo "one two three"
+}
+
+for word in $(generate_list)  # Let "word" grab output of function.
+do
+  echo "$word"
 done

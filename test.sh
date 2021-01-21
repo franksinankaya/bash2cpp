@@ -41,6 +41,8 @@ declare -a buildonly=(
 )
 
 declare -a buildandexec=(
+# "for8.sh"
+"if10.sh"
 "local.sh"
 "default0.sh"
 "functions3.sh"

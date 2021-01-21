@@ -99,7 +99,6 @@ Review missing functionality list.
 * variable.sh: dropping TIMESTAMP variables
 * functions: parameter expansion inside awk string does not work
 * if [[ ( $username == "admin" && $password == "secret" ) ]] does not work
-* if (( var1 > var2 )) doesn't work
 * nested pipes over 2 level not supported
 * . /etc/default/rcS
 * if [ -z ${VAR+x} ]; 

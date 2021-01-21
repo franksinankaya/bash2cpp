@@ -705,8 +705,16 @@ class ConvertBash {
 
         if (clausecommands.type == "Subshell") {
             const commands = clausecommands.list.commands[0].list.commands[0]
-            const [tmpclause, ] = this.convertClause(commands, true)
+            const [tmpclause,] = this.convertClause(commands, true)
             clause = tmpclause
+            if ((clausecommands.list.commands[0].type == "Subshell") && !commands.name.expansion){
+                try {
+                    let arithmeticAST = babylon.parse(clause);
+                    if (arithmeticAST.program.body.length)
+                        clause = this.convertArithmeticAST(arithmeticAST.program.body[0].expression, clause)
+                } catch (err) {
+                }
+            } 
         }
         else if (clausecommands.type == "LogicalExpression") {
             const left = clausecommands.left
