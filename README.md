@@ -83,7 +83,6 @@ if1.sh: run0 = 0.0122225284576 run1 = 0.0169756412506 diff=-0.004753112793 perce
 </pre>
 
 # BUILD TESTS
-* run.cmd
 * wsl ./test.sh
 
 # TROUBLESHOOTING

@@ -917,27 +917,27 @@ class ConvertBash {
     }
 
     private escapeText(text: any): any {
-        text = text.replace(/\\/g, "\\\\");
-        text = text.replace(/'/g, "\\'");
-        text = text.replace(/\n/g, "\\n");
+        text = this.replaceAll(text, "\\", "\\\\");
+        text = this.replaceAll(text, "'", "\\'");
+        text = this.replaceAll(text, "\n", "\\n");
         text = this.escapeDoubleQuotes(text)
-        text = text.replace(/\?/g, "\\?");
-        text = text.replace(/\f/g, "\\f");
-        text = text.replace(/\r/g, "\\r");
-        text = text.replace(/\t/g, "\\t");
-        text = text.replace(/\v/g, "\\v");
+        text = this.replaceAll(text, "\?", "\\?");
+        text = this.replaceAll(text, "\f", "\\f");
+        text = this.replaceAll(text, "\r", "\\r");
+        text = this.replaceAll(text, "\t", "\\t");
+        text = this.replaceAll(text, "\v", "\\v");
 
         return text
     }
 
     private escapeSingleQuotes(text: any): any {
-        text = text.replace("\\?", "?");
-        text = text.replace(/\\/g, "\\\\");
-        text = text.replace(/\n/g, "\\n");
-        text = text.replace(/\f/g, "\\f");
-        text = text.replace(/\r/g, "\\r");
-        text = text.replace(/\t/g, "\\t");
-        text = text.replace(/\v/g, "\\v");
+        text = this.replaceAll(text, "\\?", "?");
+        text = this.replaceAll(text, "\\", "\\\\");
+        text = this.replaceAll(text, "\n", "\\n");
+        text = this.replaceAll(text, "\f", "\\f");
+        text = this.replaceAll(text, "\r", "\\r");
+        text = this.replaceAll(text, "\t", "\\t");
+        text = this.replaceAll(text, "\v", "\\v");
 
         return text
     }
