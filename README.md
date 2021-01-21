@@ -18,8 +18,7 @@ bash2cpp is not a complete translator but does a good job for simple scripts.
 # INSTALLATION
 * git submodule init
 * git submodule update
-* cd bash2cpp
-* cd bash2cpp/bashparser
+* cd bash-parser
 * npm install --save-dev
 * npm run build
 * cd ..
