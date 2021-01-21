@@ -1777,6 +1777,21 @@ class ConvertBash {
         }
         return ""
     }
+
+    public handleLocal(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any): string {
+        let key = ""
+        let value = ""
+        let vals = suffixarray[0].text.split('=')
+        key = vals[0]
+
+        if (vals.length > 1) {
+            value = vals[1]
+            return "scopedvariable var" + key + "(\"" + key + "\", \"" + value + "\")"
+        } else {
+            return "scopedvariable var" + key + "(\"" + key + "\")"
+        }
+    }
+
     public handleCommands(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any) {
         let nametext = this.convertCommand(name)
         if (nametext[0] == '"' && nametext[nametext.length - 1] == '"') {
@@ -1795,6 +1810,10 @@ class ConvertBash {
                 {
                     const retval = suffixprocessed ? "mystoi(std::string(" + suffixprocessed + "))" : "mystoi(get_env(\"?\"))"
                     return "exit(" + retval + ")"
+                }
+            case 'local':
+                {
+                    return this.handleLocal(name, suffixarray, suffixprocessed, issuesystem)
                 }
             case 'break':
                 return "break"
@@ -2969,7 +2988,22 @@ std::streambuf *backupout = std::cout.rdbuf();\n\
         "        std::cout.rdbuf(m_redirectStream.rdbuf());\n" +
         "    }\n" +
         "    ~scopeexitcout(){std::cout.rdbuf(m_backup); std::cout << m_redirectStream.str();}\n" +
-        "};\n"
+        "};\n" +
+        "class scopedvariable{\n" +
+            "    std::string m_backup;\n" +
+            "    std::string m_env;\n" +
+            "    public:\n" +
+            "    scopedvariable(const std::string &env, const std::string newval) {\n" +
+            "        m_env = env;\n" +
+            "        m_backup = get_env(env);\n" +
+            "        set_env(env.c_str(), newval);\n" +
+            "    }\n" +
+            "    scopedvariable(const std::string &env) {\n" +
+            "        m_env = env;\n" +
+            "        m_backup = get_env(env);\n" + 
+            "    }\n" +
+            "    ~scopedvariable(){set_env(m_env.c_str(), m_backup);}\n" +
+            "};\n"
 
         let upperstr = "std::string upper(std::string str)\n" +
         "{\n" +

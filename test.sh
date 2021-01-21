@@ -41,6 +41,7 @@ declare -a buildonly=(
 )
 
 declare -a buildandexec=(
+"local.sh"
 "default0.sh"
 "functions3.sh"
 "array0.sh"
@@ -206,20 +207,29 @@ if [ "$#" -eq 2 ]; then
 	exit 0
 fi
 
-if [ $1 != "-e" ]; then
-	## now loop through the above array
-	for filename in "${buildonly[@]}"
+if [ "$#" -gt 1 ] && [ $1 == "-e" ]; then
+	for filename in "${buildandexec[@]}"
 	do
-		do_buildtest "$filename" 1 "-O3"
+		do_looptest "$filename" 1 "-O3"
 		if [ $? -ne 0 ]; then
 			exit $?
 		fi
 	done
+	exit 0
 fi
 
 for filename in "${buildandexec[@]}"
 do
 	do_looptest "$filename" 1 "-O3"
+	if [ $? -ne 0 ]; then
+		exit $?
+	fi
+done
+
+## now loop through the above array
+for filename in "${buildonly[@]}"
+do
+	do_buildtest "$filename" 1 "-O3"
 	if [ $? -ne 0 ]; then
 		exit $?
 	fi

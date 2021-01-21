@@ -92,9 +92,7 @@ Review missing functionality list.
 
 # MISSING FUNCTIONALITY
 ## HIGH PRIORITY
-* local variable support missing
 * echo -e missing
-* exec would call bash for local functions
 * checkroot.sh: while loop read from #9 file descriptor
 * checkroot.sh: exec descriptor handling
 * handle :exit 0
