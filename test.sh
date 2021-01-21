@@ -5,6 +5,46 @@ declare -a buildonly=(
 # logic.sh
 # "populate-volatile.sh"
 # checkroot.sh
+"9.9.sh"
+# "9.8.sh"
+# "9.7.sh"
+# "9.6.sh"
+"9.5.sh"
+# "9.4.sh"
+"9.3.sh"
+"9.2.sh"
+# "9.1.sh"
+"8.5.sh"
+# "8.4.sh"
+"8.3.sh"
+# "8.2.sh"
+"8.1.sh"
+"7.7.sh"
+"7.6.sh"
+"7.5.sh"
+"7.4.sh"
+# "7.3.sh"
+"7.2.sh"
+"7.1.sh"
+"6.2.sh"
+"6.1.sh"
+# "5.3.sh"
+# "5.2.sh"
+# "5.1.sh"
+"4.7.sh"
+"4.6.sh"
+"4.5.sh"
+"4.4.sh"
+"4.3.sh"
+"4.2.sh"
+"4.1.sh"
+# "3.4.sh"
+"3.3.sh"
+"3.2.sh"
+"3.1.sh"
+"2.1.sh"
+"2.2.sh"
+"2.3.sh"
 "for3.sh"
 "urandom"
 "logic.sh"
@@ -209,7 +249,7 @@ if [ "$#" -eq 2 ]; then
 	exit 0
 fi
 
-if [ "$#" -gt 1 ] && [ $1 == "-e" ]; then
+if [ "$#" -eq 1 ] && [ $1 == "-e" ]; then
 	for filename in "${buildandexec[@]}"
 	do
 		do_looptest "$filename" 1 "-O3"
@@ -220,18 +260,18 @@ if [ "$#" -gt 1 ] && [ $1 == "-e" ]; then
 	exit 0
 fi
 
-for filename in "${buildandexec[@]}"
+## now loop through the above array
+for filename in "${buildonly[@]}"
 do
-	do_looptest "$filename" 1 "-O3"
+	do_buildtest "$filename" 1 "-O3"
 	if [ $? -ne 0 ]; then
 		exit $?
 	fi
 done
 
-## now loop through the above array
-for filename in "${buildonly[@]}"
+for filename in "${buildandexec[@]}"
 do
-	do_buildtest "$filename" 1 "-O3"
+	do_looptest "$filename" 1 "-O3"
 	if [ $? -ne 0 ]; then
 		exit $?
 	fi
