@@ -2495,7 +2495,7 @@ class ConvertBash {
             return env ? true : false; \n\
         }\n\
         \n\
-        const std::string set_env(const std::string_view &cmd, const std::string &value) { \n\
+        const std::string_view set_env(const std::string_view &cmd, const std::string &value) { \n\
             if (value.back() == '\\n')\n\
                 setenv(cmd.data(), value.substr(0, value.size()-1).c_str(), 1);\n\
             else \n\
@@ -2503,16 +2503,16 @@ class ConvertBash {
             return \"\";\n\
         }\n\
         \n\
-        const std::string set_env(const std::string_view &cmd, const char *value) { \n\
+        const std::string_view set_env(const std::string_view &cmd, const char *value) { \n\
             setenv(cmd.data(), value, 1);\n\
             return \"\";\n\
         }\n\
         \n\
-        const std::string set_env(const std::string_view &cmd, const float value) { \n\
+        const std::string_view set_env(const std::string_view &cmd, const float value) { \n\
             setenv(cmd.data(), std::to_string(value).c_str(), 1);\n\
             return \"\";\n\        }\n\
         \n\
-        const std::string set_env(const std::string_view &cmd, const int value) { \n\
+        const std::string_view set_env(const std::string_view &cmd, const int value) { \n\
             setenv(cmd.data(), std::to_string(value).c_str(), 1);\n\
             return \"\";\n\
         }\n\
@@ -3014,10 +3014,10 @@ std::streambuf *backupout = std::cout.rdbuf();\n\
             "    std::string m_backup;\n" +
             "    std::string m_env;\n" +
             "    public:\n" +
-            "    scopedvariable(const std::string_view &env, const std::string &newval) {\n" +
+            "    scopedvariable(const std::string_view &env, const std::string_view &newval) {\n" +
             "        m_env = env;\n" +
             "        m_backup = get_env(env);\n" +
-            "        set_env(env.data(), newval);\n" +
+            "        set_env(env.data(), newval.data());\n" +
             "    }\n" +
             "    scopedvariable(const std::string_view &env) {\n" +
             "        m_env = env;\n" +
@@ -3026,25 +3026,29 @@ std::streambuf *backupout = std::cout.rdbuf();\n\
             "    ~scopedvariable(){set_env(m_env.c_str(), m_backup);}\n" +
             "};\n"
 
-        let upperstr = "std::string upper(std::string str)\n" +
+        let upperstr = "std::string upper(const std::string_view &str)\n" +
         "{\n" +
-        "    std::transform(str.begin(), str.end(), str.begin(), ::toupper);\n" +
-        "    return str;\n" +
+        "    std::string s(str);\n" +
+        "    std::transform(s.begin(), s.end(), s.begin(), ::toupper);\n" +
+        "    return s;\n" +
         "}\n"
-        let lowerstr = "std::string lower(std::string str)\n" +
+        let lowerstr = "std::string lower(const std::string_view &str)\n" +
         "{\n" +
-        "    std::transform(str.begin(), str.end(), str.begin(), ::tolower);\n" +
-        "    return str;\n" +
+        "    std::string s(str);\n" +
+        "    std::transform(s.begin(), s.end(), s.begin(), ::tolower);\n" +
+        "    return s;\n" +
         "}\n"
-        let uppercapitalize = "std::string uppercapitalize(std::string str)\n" +
+        let uppercapitalize = "std::string uppercapitalize(const std::string_view &str)\n" +
         "{\n" +
-        "    str[0] = toupper(str[0]);\n" +
-        "    return str;\n" +
+        "    std::string s(str);\n" +
+        "    s[0] = toupper(s[0]);\n" +
+        "    return s;\n" +
         "}\n"
-        let lowercapitalize = "std::string lowercapitalize(std::string str)\n" +
+        let lowercapitalize = "std::string lowercapitalize(const std::string_view &str)\n" +
         "{\n" +
-        "    str[0] = tolower(str[0]);\n" +
-        "    return str;\n" +
+        "    std::string s(str);\n" +
+        "    s[0] = tolower(s[0]);\n" +
+        "    return s;\n" +
         "}\n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
             + charfileexists + filereadable + fileexecutable + filewritable + direxists + envCommand + execCommand + splitCommand + regexstr + echostr
