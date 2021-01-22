@@ -1478,7 +1478,7 @@ class ConvertBash {
     public convertRangeExpansion(commandwordlist: any, assignment: any = true, delimiter: any = ","): [string, string] {
         let text = ""
         var countstr = ""
-        if ((commandwordlist.length == 1) && commandwordlist[0].text[0] == "{") {
+        if (commandwordlist &&(commandwordlist.length == 1) && commandwordlist[0].text[0] == "{") {
             const statements = commandwordlist[0].text.split("{")
             if (!assignment)
                 text += "\""
@@ -1504,7 +1504,7 @@ class ConvertBash {
                 countstr = "int length = sizeof(vals)/sizeof(vals[0]);\n"
             }
         }
-        else if ((commandwordlist.length == 1) && this.isRegexExpression(commandwordlist[0].text)) {
+        else if (commandwordlist && (commandwordlist.length == 1) && this.isRegexExpression(commandwordlist[0].text)) {
             if (assignment)
                 text += "std::vector<std::string> vals = {\n"
             text += "globvector(\"" + commandwordlist[0].text + "\")"
@@ -1513,6 +1513,13 @@ class ConvertBash {
                 text += "};\n"
                 countstr = "int length = vals.size();\n"
             }
+        }
+        else if (!commandwordlist)
+        {
+            text += "std::vector<std::string> vals = {\n"
+            text += "regexsplit(get_env(\"@\"))\n"
+            text += "};\n"
+            countstr = "int length = vals.size();\n"
         }
         else {
             let hasExpansion = false;

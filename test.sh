@@ -1,36 +1,46 @@
 #!/bin/bash
 
 declare -a buildonly=(
+"9.1.sh"
 "3.4.sh"
 # banner.sh
 # logic.sh
 # "populate-volatile.sh"
 # checkroot.sh
 "9.9.sh"
+# quote issue
 # "9.8.sh"
+# quote problem
 # "9.7.sh"
+# quote problem
 # "9.6.sh"
 "9.5.sh"
+# crashes
 # "9.4.sh"
 "9.3.sh"
 "9.2.sh"
-# "9.1.sh"
 "8.5.sh"
+# parse problem
 # "8.4.sh"
 "8.3.sh"
+# parse problem
 # "8.2.sh"
 "8.1.sh"
 "7.7.sh"
 "7.6.sh"
 "7.5.sh"
 "7.4.sh"
+# divide by zero
 # "7.3.sh"
 "7.2.sh"
 "7.1.sh"
 "6.2.sh"
 "6.1.sh"
+# parse problem
 # "5.3.sh"
+# parse problem"
 # "5.2.sh"
+# quote issues
 # "5.1.sh"
 "4.7.sh"
 "4.6.sh"
