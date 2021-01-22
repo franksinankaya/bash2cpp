@@ -1,6 +1,7 @@
 #!/bin/bash
 
 declare -a buildonly=(
+"3.4.sh"
 # banner.sh
 # logic.sh
 # "populate-volatile.sh"
@@ -38,7 +39,6 @@ declare -a buildonly=(
 "4.3.sh"
 "4.2.sh"
 "4.1.sh"
-# "3.4.sh"
 "3.3.sh"
 "3.2.sh"
 "3.1.sh"
@@ -152,7 +152,11 @@ do_buildtest()
 (
 	stringarray=($1)
 	bashargs="${stringarray[@]:1}"
-	f=$(echo "${stringarray[0]}" | cut -f 1 -d '.')
+	fullfile="${stringarray[0]}"
+	filename=$(basename -- "$fullfile")
+	extension="${filename##*.}"
+	filename="${filename%.*}"
+	f="$filename"
 	node app.js tests/${stringarray[0]} gen/$f.cpp gen/$f.log
 	if [ "$?" -ne 0 ]; then
 		exit -1

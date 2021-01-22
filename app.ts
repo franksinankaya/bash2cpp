@@ -193,6 +193,7 @@ class ConvertBash {
 
                 if (expansionarr[i].loc && (expansionarr[i].loc.start >= 0))
                     stringtermination = false
+
             }
         }
         if (expansion.indexOf("\\\"\" + ") == 0)
@@ -273,6 +274,11 @@ class ConvertBash {
 
             let expansion = variableValue
             expansion = this.convertQuotes(command.expansion, expansion)
+            if ((expansion[0] != "\"") && (command.expansion[0].loc.start > 0) &&
+                (command.text[command.expansion[0].loc.start - 1] != "=") &&
+                (command.text[command.expansion[0].loc.start - 1] != "\"")
+                )
+                expansion = "\"" + expansion
             return `set_env("${variableName}", ${expansion})`;
         }
 
