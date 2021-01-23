@@ -91,7 +91,7 @@ declare -a buildonly=(
 )
 
 declare -a buildandexec=(
-# "for8.sh"
+"for8.sh"
 "if10.sh"
 "local.sh"
 "default0.sh"
@@ -139,12 +139,10 @@ declare -a buildandexec=(
 "if0.sh"
 "case0.sh"
 "arithmetic.sh"
-# "if7.sh"
 "while.sh"
 "if8.sh"
 "parameterexpansion.sh"
 "var1.sh"
-# "for.sh"
 "var0.sh"
 "until.sh"
 "conditionals.sh"

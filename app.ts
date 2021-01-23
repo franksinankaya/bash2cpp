@@ -2037,7 +2037,7 @@ class ConvertBash {
             }
             if (lastnonexpanded)
                 suffix += "\""
-            suffix = this.trimTrailingSpaces(suffix)
+            //suffix = this.trimTrailingSpaces(suffix)
             let redirecttext = ""
             if (command.suffix && ignoreRedirects) {
                 const maintext = this.handleCommands(command.name, command.suffix, suffix, issuesystem)
