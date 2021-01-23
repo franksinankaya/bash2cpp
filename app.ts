@@ -3082,19 +3082,19 @@ try {
     maxargs = converter.maxReferredArgs(ast, maxargs)
 
     let argstr = "void convertMainArgs(int argc, const char *argv[], int maxargs){\n"
-    argstr += "if (argc > 1) set_env(\"#\", argc - 1);\n"
-    argstr += "else  set_env(\"#\", \"0\");\n"
+    argstr += "if (argc > 1) setenv(\"#\", std::to_string(argc - 1).c_str(), 0);\n"
+    argstr += "else  setenv(\"#\", \"0\", 0);\n"
     argstr += "std::string combinedargs;\n"
-    argstr += "set_env(\"0\", argv[0]);\n"
+    argstr += "setenv(\"0\", argv[0], 0);\n"
     argstr += "for (int i = 1; i < argc; i++) {\n"
-    argstr += "set_env(std::to_string(i).c_str(), argv[i]);\n"
+    argstr += "setenv(std::to_string(i).c_str(), argv[i], 0);\n"
     argstr += "combinedargs += std::string(argv[i]);\n"
     argstr += "if (i != (argc - 1)) combinedargs += \" \";\n"
     argstr += "}\n"
     argstr += "if (combinedargs.size() == 0) combinedargs = \" \";\n"
-    argstr += "set_env(\"@\", combinedargs);\n"
+    argstr += "setenv(\"@\", combinedargs.c_str(), 0);\n"
     argstr += "for (int i = argc; i < (maxargs + 1); i++) {\n"
-    argstr += "set_env(std::to_string(i).c_str(), \" \");\n"
+    argstr += "setenv(std::to_string(i).c_str(), \" \", 0);\n"
     argstr += "}\n"
     argstr += "}\n"
 
@@ -3120,12 +3120,12 @@ try {
         "#include <wordexp.h>\n" +
         "#define PIPE_READ 0\n" +
         "#define PIPE_WRITE 1\n" +
+        argstr +
         converter.getSupportDefinitions() +
         converter.getPipelineDefinitions() +
         converter.getRedirectDefinitions() +
         converter.getFunctionPrototypes() +
         converter.getFunctionDefinitions() +
-        argstr +
         "\n" +
         "int main(int argc, const char *argv[]) {\n" +
         "convertMainArgs(argc, argv, " + maxargs.toString() + ");\n" + 
