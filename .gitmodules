@@ -1,3 +1,4 @@
 [submodule "bash-parser"]
 	path = bash-parser
-	url = git@github.com:franksinankaya/bash-parser.git
+	url = https://github.com/franksinankaya/bash-parser.git
+	branch = master
