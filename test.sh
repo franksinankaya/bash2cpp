@@ -103,7 +103,7 @@ declare -a buildandexec=(
 "for4.sh"
 "echo4.sh"
 "showsize.sh"
-# "upper.sh"
+"upper.sh"
 "echo3.sh"
 # "functions2.sh"
 "lower0.sh"
@@ -137,7 +137,7 @@ declare -a buildandexec=(
 # "expansions.sh"
 # "for1.sh"
 "if0.sh"
-"case0.sh"
+# "case0.sh"
 "arithmetic.sh"
 "while.sh"
 "if8.sh"
@@ -190,8 +190,15 @@ do_test()
 
 	g++ gen/$f.cpp -o gen/$f -g $3 -fno-exceptions -lpcre -std=c++17
 
+	start=$(date +%s.%N)
 	out0=$(gen/$f $bashargs)
-	out1=$(bash tests/$1)
+	end=$(date +%s.%N)
+	runtime0=$(python -c "print(${end} - ${start})")
+
+	start=$(date +%s.%N)
+	out1=$(tests/$1)
+	end=$(date +%s.%N)
+	runtime1=$(python -c "print(${end} - ${start})")
 	if [ "$out0" != "$out1" ]; then
 		# for (( i=0; i<${#out0}; i++ )); do
 			# echo "${out0:$i:1} vs. ${out1:$i:1}"
@@ -207,21 +214,7 @@ do_test()
 		tests/$1 > out1.txt
 		exit 1
 	fi
-	start=$(date +%s.%N)
-	for i in $(seq 1 $2)
-	do
-		$(gen/$f 2>&1 > /dev/null )
-	done
-	end=$(date +%s.%N)
-	runtime0=$(python -c "print(${end} - ${start})")
 
-	start=$(date +%s.%N)
-	for i in $(seq 1 $2)
-	do
-		$(bash tests/$1 2>&1 > /dev/null )
-	done
-	end=$(date +%s.%N)
-	runtime1=$(python -c "print(${end} - ${start})")
 	diff=$(python -c "print(${runtime0} - ${runtime1})")
 	echo "$f: bin:$runtime0 vs. sh:$runtime1 diff:$diff"
 	return 

@@ -1190,8 +1190,12 @@ class ConvertBash {
                     let t = this.convertCommand(varray[i])
                     if ((q0 == '\'') && (q1 == '\''))
                         t = '\'' + this.escapeEOL(t) + '\''
+                    if ((q0 == '\"') && (q1 == '\"')) {
+                        if ((t[0] != '"') && (t[t.length - 1] != '"'))
+                            t = '\'' + t + '\''
+                    }
                     suffix += t
-                    if (i != (varray.length - 1))
+                    if ((i != (varray.length - 1)) && (varray[i + 1].type != "Redirect") && skipRedirects)
                         suffix += " "
                 }
                 suffix = this.convertQuotes(varray.expansion, suffix)
@@ -1224,7 +1228,14 @@ class ConvertBash {
                                 suffix += "\""
                             }
                         }
-                        suffix += this.convertCommand(varray[i])
+                        let t = this.convertCommand(varray[i])
+                        let q0offset = varray[i].text ? currentline.indexOf(varray[i].text) : 0
+                        let q1offset = varray[i].text ? currentline.indexOf(varray[i].text) + varray[i].text.length : 0
+                        let q0 = varray[i].loc ? currentline[varray[i].loc.start.col - 1] : currentline[q0offset - 1]
+                        let q1 = varray[i].loc ? currentline[varray[i].loc.end.col - 1] : currentline[q1offset]
+                        if ((q0 == '\'') && (q1 == '\''))
+                            t = '\'' + this.escapeEOL(t) + '\''
+                        suffix += t
                         if ((i != (varray.length - 1)) && (!varray[i + 1].expansion))
                             suffix +=  " "
                     }
@@ -1869,6 +1880,9 @@ class ConvertBash {
                     if ((suffixprocessed.substring(0, 2) == "\"'") && (suffixprocessed.substring(suffixprocessed.length - 2, suffixprocessed.length) == "'\"")) {
                         suffixprocessed = '"' + suffixprocessed.substring(2, suffixprocessed.length - 2) + '"'
                     }
+                    if ((suffixprocessed.substring(0, 1) == "'") && (suffixprocessed.substring(suffixprocessed.length - 1, suffixprocessed.length) == "'")) {
+                        suffixprocessed = suffixprocessed.substring(1, suffixprocessed.length - 1)
+                    }
 
                     if (issuesystem) {
                         text += "echo("
@@ -1903,84 +1917,87 @@ class ConvertBash {
             default:
                 {
                     let text = ""
-
                     if (issuesystem) {
                         text += "exec("
                     }
-
-                    let expanded = false
-                    if (nameexpanded) {
-                        expanded = true
-                    }
-                    if (suffixarray) {
-                        for (let v = 0; v < suffixarray.length; v++)
-                        {
-                            if (suffixarray[v].expansion) {
-                                expanded = true
-                                break
-                            }
-                        }
-                    }
-
-                    if (expanded) {
-                        if (!nameexpanded) {
-                            text += "std::string("
-                            text += "\""
-                        }
-                        else
-                            text += ""
-                        text += nametext
-                        if (suffixprocessed) {
-                            if (!nameexpanded)
-                                suffixprocessed = "\") + " + suffixprocessed
-                            else
-                                suffixprocessed = "+ \" \"" + " + " + suffixprocessed
-                        }
-                        if (suffixprocessed)
-                            text += " " + suffixprocessed
-                        else if (!nameexpanded){
-                            text += "\")"
-                        }
-                        else
-                            text += ""
-
-                    } else {
-                        if (!suffixprocessed)
-                            suffixprocessed = ""
-
-                        if (suffixprocessed[0] == '"')
-                            suffixprocessed = suffixprocessed.substr(1)
-                        if (suffixprocessed[suffixprocessed.length -1] == '"')
-                            suffixprocessed = suffixprocessed.substr(0, suffixprocessed.length - 1)
-
-                        suffixprocessed = this.escapeDoubleQuotes(suffixprocessed)
-                        if (!nameexpanded)
-                            text += "\""
-                        else
-                            text += ""
-
-                        if (nametext[nametext.length - 1] == '"')
-                            nametext = nametext.substring(0, nametext.length - 1)
-                        if (nametext[0] == '"')
-                            nametext = nametext.substring(1)
-
-                        text += nametext
-                        text += " " + suffixprocessed + '"'
-                    }
-
+                    text += this.handleExec(issuesystem, nameexpanded, suffixarray, suffixprocessed, nametext)
                     if (issuesystem) {
                         let quoteparams = false
                         if ((nametext == "printf") || (nametext == "echo")) {
-                            quoteparams = true
+                            //quoteparams = true
                             text += "," + quoteparams + ")"
                         } else {
                             text += ")"
                         }
                     }
-
                     return text
                 }
         }
+    }
+
+    public handleExec(issuesystem: any, nameexpanded: any, suffixarray: any, suffixprocessed: any, nametext: any) {
+        let text = ""
+
+        let expanded = false
+        if (nameexpanded) {
+            expanded = true
+        }
+        if (suffixarray) {
+            for (let v = 0; v < suffixarray.length; v++) {
+                if (suffixarray[v].expansion) {
+                    expanded = true
+                    break
+                }
+            }
+        }
+
+        if (expanded) {
+            if (!nameexpanded) {
+                text += "std::string("
+                text += "\""
+            }
+            else
+                text += ""
+            text += nametext
+            if (suffixprocessed) {
+                if (!nameexpanded)
+                    suffixprocessed = "\") + " + suffixprocessed
+                else
+                    suffixprocessed = "+ \" \"" + " + " + suffixprocessed
+            }
+            if (suffixprocessed)
+                text += " " + suffixprocessed
+            else if (!nameexpanded) {
+                text += "\")"
+            }
+            else
+                text += ""
+
+        } else {
+            if (!suffixprocessed)
+                suffixprocessed = ""
+
+            if (suffixprocessed[0] == '"')
+                suffixprocessed = suffixprocessed.substr(1)
+            if (suffixprocessed[suffixprocessed.length - 1] == '"')
+                suffixprocessed = suffixprocessed.substr(0, suffixprocessed.length - 1)
+
+            suffixprocessed = this.escapeDoubleQuotes(suffixprocessed)
+            if (!nameexpanded)
+                text += "\""
+            else
+                text += ""
+
+            if (nametext[nametext.length - 1] == '"')
+                nametext = nametext.substring(0, nametext.length - 1)
+            if (nametext[0] == '"')
+                nametext = nametext.substring(1)
+
+            text += nametext
+            text += " " + suffixprocessed + '"'
+        }
+
+        return text
     }
 
     public trimTrailingSpaces(suffix: any) {
