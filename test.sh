@@ -191,7 +191,7 @@ do_test()
 	g++ gen/$f.cpp -o gen/$f -g $3 -fno-exceptions -lpcre -std=c++17
 
 	out0=$(gen/$f $bashargs)
-	out1=$(tests/$1)
+	out1=$(bash tests/$1)
 	if [ "$out0" != "$out1" ]; then
 		# for (( i=0; i<${#out0}; i++ )); do
 			# echo "${out0:$i:1} vs. ${out1:$i:1}"
@@ -218,7 +218,7 @@ do_test()
 	start=$(date +%s.%N)
 	for i in $(seq 1 $2)
 	do
-		$(tests/$1 2>&1 > /dev/null )
+		$(bash tests/$1 2>&1 > /dev/null )
 	done
 	end=$(date +%s.%N)
 	runtime1=$(python -c "print(${end} - ${start})")
