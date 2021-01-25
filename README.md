@@ -15,6 +15,21 @@ bash2cpp is not a complete translator but does a good job for simple scripts.
 
 ![Node.js CI](https://github.com/franksinankaya/bash2cpp/workflows/Node.js%20CI/badge.svg)
 
+# REQUIREMENTS
+<pre>
+sudo apt-get install -y build-essential
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt update
+sudo apt install gcc-9 g++-9
+sudo update-alternatives \
+--install /usr/bin/gcc gcc /usr/bin/gcc-9 100 \
+--slave /usr/bin/gcc-ar gcc-ar /usr/bin/gcc-ar-9 \
+--slave /usr/bin/gcc-ranlib gcc-ranlib /usr/bin/gcc-ranlib-9 \
+--slave /usr/bin/gcov gcov /usr/bin/gcov-9
+sudo update-alternatives \
+--install /usr/bin/g++ g++ /usr/bin/g++-9 100
+</pre>
+
 # INSTALLATION
 * git submodule init
 * git submodule update
