@@ -1250,6 +1250,8 @@ class ConvertBash {
     }
 
     public isRegexExpression(str: any): boolean {
+        if (str.includes("[*]"))
+            return false
         if (str.includes("*") || str.includes("?")) {
             return true
         }
