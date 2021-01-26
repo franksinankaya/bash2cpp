@@ -1840,7 +1840,7 @@ class ConvertBash {
         switch (name.text) {
             case 'exit':
                 {
-                    const retval = suffixprocessed ? "mystoi(std::string(" + suffixprocessed + "))" : "mystoi(get_env(\"?\"))"
+                    const retval = suffixprocessed ? "mystoi(std::string_view(" + suffixprocessed + "))" : "mystoi(get_env(\"?\"))"
                     return "exit(" + retval + ")"
                 }
             case 'local':

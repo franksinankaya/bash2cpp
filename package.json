@@ -24,7 +24,7 @@
     "prebuild": "mgb bash-parser/src/modes posix && mgb bash-parser/src/modes bash && mgb bash-parser/src/modes word-expansion",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "test": "bash test.sh"
+    "test": "python3 test.py"
   },
   "devDependencies": {
     "@types/node": "^8.10.66",
