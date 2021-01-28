@@ -105,6 +105,7 @@ buildonly = [
 ]
 
 buildandexec = [
+"emptyvar.sh",
 "for8.sh",
 "if10.sh",
 "local.sh",

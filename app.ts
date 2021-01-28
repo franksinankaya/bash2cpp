@@ -2441,6 +2441,7 @@ class ConvertBash {
     public getSupportDefinitions(): string {
         const fileexists = "\n\
         const int fileexists(const std::string_view &file) {\n\
+            if (file == \"\") return true; \n\
             return std::filesystem::exists(file);        \n\
         }\n\
         std::ifstream::pos_type filesize(const char* filename)\n\
@@ -2462,46 +2463,55 @@ class ConvertBash {
 
         const pipefileexists = "\n\
         const int pipefileexists(const std::string_view &file) {          \n\
+            if (file == \"\") return true; \n\
             return fileexists(file) && std::filesystem::is_fifo(std::filesystem::status(file));        \n\
         }\n"
 
         const linkfileexists = "\n\
         const int linkfileexists(const std::string_view &file) {          \n\
+            if (file == \"\") return true; \n\
             return fileexists(file) && std::filesystem::is_symlink(std::filesystem::status(file));        \n\
         }\n"
 
         const socketfileexists = "\n\
         const int socketfileexists(const std::string_view &file) {          \n\
+            if (file == \"\") return true; \n\
             return fileexists(file) && std::filesystem::is_socket(std::filesystem::status(file));        \n\
         }\n"
 
         const blockfileexists = "\n\
         const int blockfileexists(const std::string_view &file) {          \n\
+            if (file == \"\") return true; \n\
             return fileexists(file) && std::filesystem::is_block_file(std::filesystem::status(file));        \n\
         }\n"
 
         const charfileexists = "\n\
         const int charfileexists(const std::string_view &file) {          \n\
+            if (file == \"\") return true; \n\
             return fileexists(file) && std::filesystem::is_character_file(std::filesystem::status(file));        \n\
         }\n"
 
         const fileexecutable = "\n\
         const int fileexecutable(const std::string_view &file) {          \n\
+            if (file == \"\") return true; \n\
             return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_exec)!= std::filesystem::perms::none);        \n\
         }\n"
 
         const filewritable = "\n\
         const int filewritable(const std::string_view &file) {          \n\
+            if (file == \"\") return true; \n\
             return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_write)!= std::filesystem::perms::none);        \n\
         }\n"
 
         const filereadable = "\n\
         const int filereadable(const std::string_view &file) {          \n\
+            if (file == \"\") return true; \n\
             return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_read)!= std::filesystem::perms::none);        \n\
         }\n"
 
         const direxists = "\n\
         const int direxists(const std::string_view &file) {                                   \n\
+            if (file == \"\") return true; \n\
             return fileexists(file) && std::filesystem::is_directory(std::filesystem::status(file));        \n\
         }\n"
 
