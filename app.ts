@@ -257,7 +257,7 @@ class ConvertBash {
 					 CommandExpansion |
 					 ParameterExpansion>
      */
-    private convertAssignment(command: any): string {
+    private getAssignmentPair(command: any): [string, string, boolean] {
         if (this.validExpansion(command)) {
             const text = this.convertWord(command)
             const equalpos = text.indexOf("=")
@@ -279,12 +279,16 @@ class ConvertBash {
                 (command.text[command.expansion[0].loc.start - 1] != "\"")
                 )
                 expansion = "\"" + expansion
-            return `set_env("${variableName}", ${expansion})`;
+
+            return [variableName, expansion, false]
+            //return `set_env("${variableName}", ${expansion})`;
         }
 
         let variableValue
 
         const equalpos = command.text.indexOf("=")
+        if (equalpos == -1)
+            return [ command.text, "", false]
         const variableName = command.text.substr(0, equalpos)
         variableValue = command.text.substr(equalpos + 1, command.text.length)
         let startindex = 0
@@ -292,15 +296,26 @@ class ConvertBash {
         if (variableValue.indexOf("~") != -1) {
             variableValue = this.replaceAll(variableValue, "~", "\" + get_env(\"HOME\") + \"")
             variableValue = "\"" + variableValue + "\""
-            return `set_env("${variableName}", ${variableValue})`;
+            return [variableName, variableValue, false]
+            //return `set_env("${variableName}", ${variableValue})`;
         }
 
         variableValue = this.convertQuotes(command.expansion, variableValue)
+        if (!variableValue.startsWith('"') && !this.isNumeric(variableValue))
+            return [variableName, variableValue, true]
+        return [variableName, variableValue, false]
 
         // auto-quote value if it doesn't start with quote
-        if (!variableValue.startsWith('"') && !this.isNumeric(variableValue))
-            return `set_env("${variableName}", "${variableValue}")`;
-        return `set_env("${variableName}", ${variableValue})`;
+        //if (!variableValue.startsWith('"') && !this.isNumeric(variableValue))
+        //    return `set_env("${variableName}", "${variableValue}")`;
+        //return `set_env("${variableName}", ${variableValue})`;
+    }
+
+    private convertAssignment(command: any): string {
+        let [variableName, variableValue, needsquote] = this.getAssignmentPair(command)
+        if (!needsquote)
+            return `set_env("${variableName}", ${variableValue})`;
+        return `set_env("${variableName}", "${variableValue}")`;
     }
 
     private isNumeric(val: any): boolean {
@@ -1812,21 +1827,25 @@ class ConvertBash {
         return ""
     }
 
-    public handleLocal(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any): string {
-        let key = ""
-        let value = ""
+    public handleLocal(command:any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any): string {
         let vals = suffixarray[0].text.split('=')
-        key = vals[0]
+        let text = ""
+        for (let s = 0; s < command.suffix.length; s++) {
+            let [key, variableValue, needsquote] = this.getAssignmentPair(command.suffix[s])
+            if (needsquote)
+                variableValue = "\"" + variableValue + "\""
 
-        if (vals.length > 1) {
-            value = vals[1]
-            return "scopedvariable var" + key + "(\"" + key + "\", \"" + value + "\")"
-        } else {
-            return "scopedvariable var" + key + "(\"" + key + "\")"
+
+            if (vals.length > 1) {
+                text += "scopedvariable var" + key + "(\"" + key + "\", " + variableValue + ")"
+            } else {
+                text += "scopedvariable var" + key + "(\"" + key + "\")"
+            }
         }
+        return text
     }
 
-    public handleCommands(name: any, suffixarray: any, suffixprocessed: any, issuesystem: any) {
+    public handleCommands(command:any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any) {
         let nametext = this.convertCommand(name)
         if (nametext[0] == '"' && nametext[nametext.length - 1] == '"') {
             nametext = nametext.substring(1, nametext.length - 2)
@@ -1847,7 +1866,7 @@ class ConvertBash {
                 }
             case 'local':
                 {
-                    return this.handleLocal(name, suffixarray, suffixprocessed, issuesystem)
+                    return this.handleLocal(command,name, suffixarray, suffixprocessed, issuesystem)
                 }
             case 'break':
                 return "break"
@@ -2059,7 +2078,7 @@ class ConvertBash {
             //suffix = this.trimTrailingSpaces(suffix)
             let redirecttext = ""
             if (command.suffix && ignoreRedirects) {
-                const maintext = this.handleCommands(command.name, command.suffix, suffix, issuesystem)
+                const maintext = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem)
                 redirecttext = maintext
                 for (let i = 0; i < command.suffix.length; i++) {
                     if ((command.suffix[i].type == "Redirect")) {
@@ -2073,7 +2092,7 @@ class ConvertBash {
             }
 
             if (handlecommands) {
-                let t = this.handleCommands(command.name, command.suffix, suffix, issuesystem)
+                let t = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem)
                 let hasRedirect = false
                 if (command.suffix) {
                     for (let i = 0; i < command.suffix.length; i++) {
@@ -2519,11 +2538,6 @@ class ConvertBash {
                 setenv(cmd.data(), value.substr(0, value.size()-1).c_str(), 1);\n\
             else \n\
                 setenv(cmd.data(), value.c_str(), 1);\n\
-            return \"\";\n\
-        }\n\
-        \n\
-        const std::string_view set_env(const std::string_view &cmd, const char *value) { \n\
-            setenv(cmd.data(), value, 1);\n\
             return \"\";\n\
         }\n\
         \n\
