@@ -710,11 +710,16 @@ class ConvertBash {
                 intest = true
         }
         else {
-            if (name != "!")
-                clause = " checkval(" + this.convertExecCommand(clausecommands, false) + ")"
+            let cmd = "checkexec"
+            let isinternal = this.isKnownFunction(clausecommands.name, clausecommands.suffix)
+            if (isinternal)
+                cmd = "checkbuiltinexec"
+            if (name != "!") {
+                clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, false) + ")"
+            }
             else {
                 const clauseexpansion = this.convertExecCommand(clausecommands, false, false)
-                clause = "!checkval(" + clauseexpansion + ")"
+                clause = "!" + cmd + "(" + clauseexpansion + ")"
             }
         }
 
@@ -1795,6 +1800,22 @@ class ConvertBash {
         return command.commands.map(c => this.convertCommand(c)).join(';\n');
     }
 
+    public isKnownFunction(name: any, suffixarray: any) {
+        let sarray = suffixarray
+        if (name && (name.text == "!") && sarray.length > 0) {
+            name = suffixarray[0]
+        }
+        if (!name)
+            return false;
+        for (let v = 0; v < this.functiondefs.length; v++) {
+            let func = this.functiondefs[v][0].name.text
+            if (func == name.text) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public handleKnownFunctions(name: any, suffixarray: any) {
         let sarray = suffixarray
         let startindex = 0
@@ -2664,7 +2685,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
     wordfree(&p);\n\
 }\n\
         \n\
-        const int checkval(const std::string_view &cmd) { \n\
+        const int checkexec(const std::string_view &cmd) { \n\
             int exitstatus; \n\
             std::string result;\n\
             if (!cmd.empty()) {\n\
@@ -2672,6 +2693,16 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             } else {\n\
                 exitstatus = mystoi(get_env(\"?\"), 0);\n\
             }\n\
+            return exitstatus == 0; \n\
+        }\n\
+        const int checkbuiltinexec(const std::string_view &cmd) { \n\
+            int exitstatus; \n\
+            std::string result;\n\
+            if (!cmd.empty()) {\n\
+                if (cmd == \"0\") return true;\n\
+                if (cmd == \"1\") return false;\n\
+            }\n\
+            exitstatus = mystoi(get_env(\"?\"), 0);\n\
             return exitstatus == 0; \n\
         }\n\
         \n\
