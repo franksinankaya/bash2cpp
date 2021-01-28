@@ -1563,9 +1563,12 @@ class ConvertBash {
                     break
                 }
             }
+            let vector = false
             if (assignment) {
-                if (hasExpansion)
-                    text += "std::vector<std::string> vals = {\n"
+                if (hasExpansion) {
+                    text += "std::vector<std::string> vals;\n"
+                    vector = true
+                }
                 else
                     text += "const char* vals[] = {\n"
             }
@@ -1574,7 +1577,14 @@ class ConvertBash {
                 text += "\""
             for (i = 0; i < commandwordlist.length; i++) {
                 if (commandwordlist[i].expansion) {
-                    text += "regexsplit(" + this.convertCommand(commandwordlist[i]) + ")"
+                    if (vector) {
+                        text += "{\n"
+                        text += "auto newvar = regexsplit(" + this.convertCommand(commandwordlist[i]) + ");\n"
+                        text += "vals.insert( vals.end(), newvar.begin(), newvar.end() );"
+                        text += "}\n"
+                    }
+                    else
+                        text += "regexsplit(" + this.convertCommand(commandwordlist[i]) + ")"
                 } else {
                     if (hasExpansion)
                         text += "std::string(\"" + commandwordlist[i].text + "\")"
@@ -1583,14 +1593,17 @@ class ConvertBash {
                     else
                         text += commandwordlist[i].text
                 }
-                if (i != (commandwordlist.length - 1))
-                    text += delimiter
+                if (i != (commandwordlist.length - 1)) {
+                    if (!vector)
+                        text += delimiter
+                }
             }
             if (!hasExpansion && !assignment)
                 text += "\""
             if (assignment) {
                 text += "\n"
-                text += "};\n"
+                if (!vector)
+                    text += "};\n"
                 if (hasExpansion)
                     countstr = "int length = vals.size();\n"
                 else
