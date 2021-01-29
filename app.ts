@@ -1810,7 +1810,16 @@ class ConvertBash {
         }
     }
     public convertCompoundList(command: any): string {
-        return command.commands.map(c => this.convertCommand(c)).join(';\n');
+        let maintext = command.commands.map(c => this.convertCommand(c)).join(';\n');
+        let redirecttext = maintext
+        if (command.redirections) {
+            for (let i = 0; i < command.redirections.length; i++) {
+                if ((command.redirections[i].type == "Redirect")) {
+                    redirecttext = this.convertStdRedirects(command.redirections, i, redirecttext)
+                }
+            }
+        }
+        return redirecttext
     }
 
     public isKnownFunction(name: any, suffixarray: any) {

@@ -105,6 +105,8 @@ buildonly = [
 ]
 
 buildandexec = [
+# "4.1.sh",
+# "3.3.sh",
 "emptyvar.sh",
 "for8.sh",
 "if10.sh",
@@ -120,7 +122,7 @@ buildandexec = [
 "showsize.sh",
 "upper.sh",
 "echo3.sh",
-# "functions2.sh",
+"functions2.sh",
 "lower0.sh",
 "upper0.sh",
 #"catinput.sh",
@@ -152,7 +154,7 @@ buildandexec = [
 # "expansions.sh",
 # "for1.sh",
 "if0.sh",
-# "case0.sh",
+"case0.sh",
 "arithmetic.sh",
 "while.sh",
 "if8.sh",

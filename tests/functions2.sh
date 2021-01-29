@@ -34,4 +34,4 @@ status() {
     return 3
 }
 
-status bash
+status python
