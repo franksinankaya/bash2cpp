@@ -5,6 +5,7 @@ const babylon = require('babylon');
 
 class ConvertBash {
     private functiondefs: any = []
+    private asyncs: any = []
     private redirects: any = []
     private pipelines: any = []
     private lines: any
@@ -676,7 +677,7 @@ class ConvertBash {
         return clause
     }
 
-    private convertClause(clausecommands: any, intest = false): [string, boolean] {
+    private convertClause(clausecommands: any, intest = false, async = true): [string, boolean] {
         let clause = ""
         let name = clausecommands.name ? clausecommands.name.text : ""
         if (intest || (name == "test") || (name == "[") || (name == "[[") ||
@@ -715,10 +716,10 @@ class ConvertBash {
             if (isinternal)
                 cmd = "checkbuiltinexec"
             if (name != "!") {
-                clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, false) + ")"
+                clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, false, true, [], true, async) + ")"
             }
             else {
-                const clauseexpansion = this.convertExecCommand(clausecommands, false, false)
+                const clauseexpansion = this.convertExecCommand(clausecommands, false, false, [], true, async)
                 clause = "!" + cmd + "(" + clauseexpansion + ")"
             }
         }
@@ -726,12 +727,16 @@ class ConvertBash {
         return [clause, intest]
     }
 
-    private convertIfStatement(command: any, clausecommands:any, then: any): string [] {
+    private convertIfStatement(command: any, clausecommands:any, then: any, async = true): string [] {
         let clause = ""
 
         if (clausecommands.type == "Subshell") {
+            if (clausecommands.list.commands.length > 1)
+                this.terminate(clausecommands)
+            if (clausecommands.list.commands[0].list.commands.length > 1)
+                this.terminate(clausecommands)
             const commands = clausecommands.list.commands[0].list.commands[0]
-            const [tmpclause,] = this.convertClause(commands, true)
+            const [tmpclause,] = this.convertClause(commands, true, async)
             clause = tmpclause
             if ((clausecommands.list.commands[0].type == "Subshell") && !commands.name.expansion){
                 try {
@@ -749,7 +754,7 @@ class ConvertBash {
 
             clause = this.convertLogicalCondition(left, right, op)
         } else {
-            const [tmpclause, ] = this.convertClause(clausecommands)
+            const [tmpclause, ] = this.convertClause(clausecommands, false, async)
             clause = tmpclause
         }
 
@@ -766,18 +771,20 @@ class ConvertBash {
     private convertIf(command: any): string {
         let redirectindex = -1
         let redirections = null
+        let async = true
 
         if (command.clause.commands.length != 1) {
             if (command.clause.commands[1].prefix && command.clause.commands[1].prefix[0].type == "Redirect") {
                 redirectindex = 0
                 redirections = command.clause.commands[1].prefix
+                async = false
             }
             else
                 this.terminate(command)
         }
 
         let maintext = ""
-        const [clause, thenval, elseval] = this.convertIfStatement(command, command.clause.commands[0], command.then)
+        const [clause, thenval, elseval] = this.convertIfStatement(command, command.clause.commands[0], command.then, async)
         
         maintext += "if (" + clause + ") { \n" + thenval + "\n}\n" + (elseval ? "else\n{\n" + elseval + "}" : "");
         if (command.else && command.else.type == "If") {
@@ -1870,6 +1877,10 @@ class ConvertBash {
         return ""
     }
 
+    public handleWait(command: any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any): string {
+        return "wait()"
+    }
+
     public handleLocal(command:any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any): string {
         let vals = suffixarray[0].text.split('=')
         let text = ""
@@ -1910,6 +1921,10 @@ class ConvertBash {
             case 'local':
                 {
                     return this.handleLocal(command,name, suffixarray, suffixprocessed, issuesystem)
+                }
+            case 'wait':
+                {
+                    return this.handleWait(command,name, suffixarray, suffixprocessed, issuesystem)
                 }
             case 'break':
                 return "break"
@@ -2088,9 +2103,25 @@ class ConvertBash {
         return "redirects" + currentlength.toString() + "(" + maintext + ")"
     }
 
-    public convertExecCommand(command: any, issuesystem: any = true, handlecommands: any = true, coordinate = [], stdout: any = true): string {
+    public convertExecCommand(command: any, issuesystem: any = true, handlecommands: any = true, coordinate = [], stdout: any = true, async: any = true): string {
         let currentline = ""
         let currentstr = ""
+        if (command.async && async) {
+            let text = ""
+            let index = this.asyncs.length
+            let found = false
+            for (let v = 0; v < this.asyncs.length; v++) {
+                if (this.asyncs[v][0] == command) {
+                    index = v
+                    found = true
+                    break
+                }
+            }
+            if (!found)
+                this.asyncs.push([command, this.currentrowstart, this.currentrowend])
+            text += "asyncs" + index.toString() + "();\n"
+            return text
+        }
         if (coordinate.length > 0) {
             currentline = this.lines[coordinate[0].row - 1]
         } else {
@@ -2439,6 +2470,47 @@ class ConvertBash {
                 text += "return \"\";\n"
                 text += "}\n"
                 text += "\n"
+            }
+            return text ? "\n\n" + text + "\n\n" : ""
+        }
+        return ""
+    }
+
+    public getAsyncDefinitions(prototype = false): string {
+        if (this.asyncs) {
+            let text = ""
+            for (let v = 0; v < this.asyncs.length; v++) {
+                let name = "asyncs" + v
+                let maintext = this.convertExecCommand(this.asyncs[v][0], true, true, [this.asyncs[v][1], this.asyncs[v][2]], true, false)
+
+                text += "void " + name + "(void)"
+                if (prototype) {
+                    text += ";\n"
+                    continue
+                }
+                text += "{\n"
+                text += "pid_t pid = fork();\n"
+                text += "if (pid > 0) {return;}\n"
+                let redir = maintext + ";\n"
+                for (let r = this.asyncs[v][0].suffix.length - 1; r >= 0; r--) {
+                    if (this.asyncs[v][0].suffix[r].type == "Redirect") {
+                        redir = this.convertStdRedirects(this.asyncs[v][0].suffix, r, redir)
+                    }
+                }
+                text += redir
+                text += "exit(0);\n"
+                text += "}\n"
+                text += "\n"
+            }
+            if (text) {
+                let waitfunc = "void wait()"
+                if (!prototype)
+                    waitfunc += "\n{\n" +
+                    "    waitpid(-1, NULL, 0);\n" +
+                    "}\n"
+                else
+                    waitfunc += ";\n"
+                text += waitfunc
             }
             return text ? "\n\n" + text + "\n\n" : ""
         }
@@ -3218,10 +3290,12 @@ try {
         "#define PIPE_WRITE 1\n" +
         argstr +
         converter.getSupportDefinitions() +
+        converter.getAsyncDefinitions(true) +
         converter.getPipelineDefinitions() +
         converter.getRedirectDefinitions() +
         converter.getFunctionPrototypes() +
         converter.getFunctionDefinitions() +
+        converter.getAsyncDefinitions() +
         "\n" +
         "int main(int argc, const char *argv[]) {\n" +
         "convertMainArgs(argc, argv, " + maxargs.toString() + ");\n" + 
