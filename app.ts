@@ -1886,6 +1886,9 @@ class ConvertBash {
         return "wait()"
     }
 
+    public handleSource(command: any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any): string {
+        return "source(" + suffixprocessed + ")"
+    }
     public handleLocal(command:any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any): string {
         let vals = suffixarray[0].text.split('=')
         let text = ""
@@ -1922,6 +1925,11 @@ class ConvertBash {
                 {
                     const retval = suffixprocessed ? "mystoi(std::string(" + suffixprocessed + "))" : "mystoi(get_env(\"?\"))"
                     return "exit(" + retval + ")"
+                }
+            case '.':
+            case 'source':
+                {
+                    return this.handleSource(command,name, suffixarray, suffixprocessed, issuesystem)
                 }
             case 'local':
                 {
@@ -3248,9 +3256,24 @@ std::streambuf *backupout = std::cout.rdbuf();\n\
         "    s[0] = tolower(s[0]);\n" +
         "    return s;\n" +
         "}\n"
+        let sourcefunc = "void source(const std::string &fname)\n" +
+        "{\n"  +
+            "std::vector<std::string> envs;\n" +
+            "std::string delimiter(\"\\n\");\n" +
+            "split(envs, execnoout(\"bash -c 'set -a && source \" + fname + \" && set +a && env'\"), delimiter);\n" +
+            "delimiter=\"=\";\n" +
+            "for (auto &v: envs) {\n"  +
+            "    std::vector<std::string> keyvalue;\n"  +
+            "    split(keyvalue, v, delimiter);\n"  +
+            "    if (keyvalue.size() != 2) continue;\n"  +
+            "    if (keyvalue[0] == \"#\") continue;\n" +
+            "    if (keyvalue[1] == \"\") continue;\n" +
+            "    set_env(keyvalue[0], keyvalue[1]);\n"  +
+            "}\n"  +
+        "}\n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
             + charfileexists + filereadable + fileexecutable + filewritable + direxists + envCommand + execCommand + splitCommand + regexstr + echostr
-            + cdstr + readstr + incrementstr + processargsstr + scopeexitstr + upperstr + lowerstr + uppercapitalize + lowercapitalize;
+            + cdstr + readstr + incrementstr + processargsstr + scopeexitstr + upperstr + lowerstr + uppercapitalize + lowercapitalize + sourcefunc;
     }
 }
 
