@@ -715,7 +715,12 @@ class ConvertBash {
             let isinternal = this.isKnownFunction(clausecommands.name, clausecommands.suffix)
             if (isinternal)
                 cmd = "checkbuiltinexec"
-            if (name != "!") {
+            let negative = false
+            if (clausecommands.commands && clausecommands.commands[0].name && clausecommands.commands[0].name.text == "!") {
+                negative = true
+            }
+
+            if ((name != "!") && !negative) {
                 clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, false, true, [], true, async) + ")"
             }
             else {
@@ -2206,7 +2211,9 @@ class ConvertBash {
                 return "pipeline" + v.toString() + "(" + stdout + ")"
         }
         this.pipelines.push([command, this.currentrowstart, this.currentrowend])
-        return "pipeline" + currentlength.toString() + "(" + stdout + ")"
+
+        text += "pipeline" + currentlength.toString() + "(" + stdout + ")"
+        return text
     }
 
     /* 
@@ -2535,7 +2542,16 @@ class ConvertBash {
                     if (c > 0)
                         text += scope + ".writecin(" + previousscope + ".buf());\n"
                     let coordinate = [this.pipelines[v][1], this.pipelines[v][2]]
-                    text += this.convertExecCommand(this.pipelines[v][0].commands[c], true, true, coordinate) + ";\n"
+                    let cmd = this.pipelines[v][0].commands[c]
+                    if (cmd.name.text == "!") {
+                        if (cmd.suffix) {
+                            cmd.name = cmd.suffix[0]
+                            cmd.suffix.shift()
+                        } else {
+                            this.terminate(cmd)
+                        }
+                    }
+                    text += this.convertExecCommand(cmd, true, true, coordinate) + ";\n"
                     text += scope + ".release();\n"
                     text += "\n"
                 }
