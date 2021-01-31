@@ -2817,7 +2817,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         exit(-1);\n\
     w = p.we_wordv;\n\
     for (int i = 0; i < p.we_wordc; i++) {\n\
-        toks.push_back(w[i]);\n\
+        toks.emplace_back(w[i]);\n\
     }\n\
     toks.push_back(NULL);\n\
     exitstatus = createChild(toks, result, stdout);\n\
@@ -2876,13 +2876,13 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                                                 \n\
             while ((pos = str.find_first_of(delimiter, prev)) != std::string::npos) {\n\
                 if (pos > prev)\n\
-                    tokens.push_back(str.substr(prev, pos-prev));\n\
+                    tokens.emplace_back(str.substr(prev, pos-prev));\n\
                 prev = pos+1;\n\
             }\n\
             if (prev < str.length()){\n\
                 size_t end = str.length() - prev;\n\
                 if (str.back() == '\\\'') end--;\n\
-                tokens.push_back(str.substr(prev, end));\n\
+                tokens.emplace_back(str.substr(prev, end));\n\
             }\n\
         }\n\
         \n\
@@ -2939,7 +2939,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             glob(pattern.data(), GLOB_TILDE, NULL,& glob_result);\n\
             std::vector <std::string> files;\n\
             for (unsigned int i = 0; i < glob_result.gl_pathc; ++i) {\n\
-                files.push_back(std::string(glob_result.gl_pathv[i]));\n\
+                files.emplace_back(std::string(glob_result.gl_pathv[i]));\n\
             }\n\
             globfree(& glob_result);\n\
             return files;\n\
@@ -3075,7 +3075,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         text += "void saveargs(std::vector<std::string> &list, int maxargs)\n"
         text += "{\n"
         text += "    for (int i = 0; i < maxargs; i++) {\n"
-        text += "        list.push_back(get_env(std::to_string(i + 1).c_str()));\n"
+        text += "        list.emplace_back(get_env(std::to_string(i + 1).c_str()));\n"
         text += "    }\n"
         text += "}\n"
         text += "void processargs(std::initializer_list<std::string> &list, int maxargs)\n"
