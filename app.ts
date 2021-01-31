@@ -732,12 +732,14 @@ class ConvertBash {
                     this.terminate(clausecommands.commands[0])
                 }
             }
-
+            if (clausecommands.type == "Pipeline") {
+                cmd = "checkexitcode"
+            }
             if ((name != "!") && !negative) {
-                clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, false, true, [], true, async) + ")"
+                clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, false, true, [], false, async) + ")"
             }
             else {
-                const clauseexpansion = this.convertExecCommand(clausecommands, false, true, [], true, async)
+                const clauseexpansion = this.convertExecCommand(clausecommands, false, true, [], false, async)
                 clause = "!" + cmd + "(" + clauseexpansion + ")"
             }
         }
@@ -2231,7 +2233,13 @@ class ConvertBash {
             if (this.pipelines[v][0] == command)
                 return "pipeline" + v.toString() + "(" + stdout + ")"
         }
-        this.pipelines.push([command, this.currentrowstart, this.currentrowend])
+        let row = this.currentrowstart
+        let col = this.currentrowend
+        if (command.loc) {
+            row = command.loc.start.row > this.currentrowstart.row ? command.loc.start : this.currentrowstart
+            col = command.loc.end.row > this.currentrowend.row ? command.loc.end : this.currentrowend
+        }
+        this.pipelines.push([command, row, col])
 
         text += "pipeline" + currentlength.toString() + "(" + stdout + ")"
         return text
@@ -2844,6 +2852,11 @@ void execcommand(const std::string &cmd, int & exitstatus, std::string &result, 
                 if (cmd == \"0\") return true;\n\
                 if (cmd == \"1\") return false;\n\
             }\n\
+            exitstatus = mystoi(get_env(\"?\"), 0);\n\
+            return exitstatus == 0; \n\
+        }\n\
+        const int checkexitcode(const std::string &cmd) { \n\
+            int exitstatus; \n\
             exitstatus = mystoi(get_env(\"?\"), 0);\n\
             return exitstatus == 0; \n\
         }\n\
