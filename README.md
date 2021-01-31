@@ -1,7 +1,6 @@
 # INTRODUCTION
 
-bash2cpp converts simple bash scripts to c++ code.
-It requires c++17 for file IO and expects c++ code to run in Linux.
+bash2cpp converts simple bash scripts to c++ code and expects binary to run on Linux.
 Though, with some effort Linux dependency can be removed but this is not
 in radar at this moment.
 
@@ -47,11 +46,11 @@ sudo update-alternatives \
 * optional (beautify code)
 	* astyle -q -n gen/%test.cpp
 * if you have WSL
-	* wsl g++ gen/test.cpp -o gen/test -lpcre -std=c++17 -g 
+	* wsl g++ gen/test.cpp -o gen/test -lpcre -g 
 * if you are on linux
-	* g++ gen/test.cpp -o gen/test -lpcre -std=c++17 -g
+	* g++ gen/test.cpp -o gen/test -lpcre -g
 * Size and speed optimization
-    * g++ gen/test.cpp -o gen/test -lpcre -std=c++17 -O3 -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -g
+    * g++ gen/test.cpp -o gen/test -lpcre -O3 -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -g
 # IMPROVEMENT
 
 <pre>

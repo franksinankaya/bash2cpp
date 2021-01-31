@@ -1915,7 +1915,7 @@ class ConvertBash {
         switch (name.text) {
             case 'exit':
                 {
-                    const retval = suffixprocessed ? "mystoi(std::string_view(" + suffixprocessed + "))" : "mystoi(get_env(\"?\"))"
+                    const retval = suffixprocessed ? "mystoi(std::string(" + suffixprocessed + "))" : "mystoi(get_env(\"?\"))"
                     return "exit(" + retval + ")"
                 }
             case 'local':
@@ -2459,7 +2459,7 @@ class ConvertBash {
             for (let v = 0; v < this.redirects.length; v++) {
                 let name = "redirects" + v
 
-                text += "std::string " + name + "(const std::string_view &str) {\n"
+                text += "std::string " + name + "(const std::string &str) {\n"
                 let redir = "execnoout(str);\n"
                 for (let r = this.redirects[v][0].suffix.length - 1; r >= 0; r--) {
                     if (this.redirects[v][0].suffix[r].type == "Redirect") {
@@ -2555,16 +2555,17 @@ class ConvertBash {
 
     public getSupportDefinitions(): string {
         const fileexists = "\n\
-        const int fileexists(const std::string_view &file) {\n\
+        const int fileexists(const std::string &file) {\n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return std::filesystem::exists(file);        \n\
+                return (stat(file.data(), &buf) == 0);        \n\
         }\n\
         std::ifstream::pos_type filesize(const char* filename)\n\
         {\n\
             std::ifstream in (filename, std::ifstream::ate | std::ifstream::binary);\n\
             return in.tellg();\n\
         }\n\
-        const int fileexists_sizenonzero(const std::string_view &file) {\n\
+        const int fileexists_sizenonzero(const std::string &file) {\n\
             if (fileexists(file)){        \n\
                 return filesize(file.data()) != 0;\n\
             }\n\
@@ -2572,93 +2573,103 @@ class ConvertBash {
         }\n"
 
         const regularfileexists = "\n\
-        const int regularfileexists(const std::string_view &file) {          \n\
-            return fileexists(file) && std::filesystem::is_regular_file(std::filesystem::status(file));        \n\
+        const int regularfileexists(const std::string &file) {          \n\
+            struct stat buf;                        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISREG(buf.st_mode);        \n\
         }\n"
 
         const pipefileexists = "\n\
-        const int pipefileexists(const std::string_view &file) {          \n\
+        const int pipefileexists(const std::string &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_fifo(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && (buf.st_mode & S_IFIFO);        \n\
         }\n"
 
         const linkfileexists = "\n\
-        const int linkfileexists(const std::string_view &file) {          \n\
+        const int linkfileexists(const std::string &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_symlink(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISLNK(buf.st_mode);        \n\
         }\n"
 
         const socketfileexists = "\n\
-        const int socketfileexists(const std::string_view &file) {          \n\
+        const int socketfileexists(const std::string &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_socket(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISSOCK(buf.st_mode);        \n\
         }\n"
 
         const blockfileexists = "\n\
-        const int blockfileexists(const std::string_view &file) {          \n\
+        const int blockfileexists(const std::string &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_block_file(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISBLK(buf.st_mode);        \n\
         }\n"
 
         const charfileexists = "\n\
-        const int charfileexists(const std::string_view &file) {          \n\
+        const int charfileexists(const std::string &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_character_file(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISCHR(buf.st_mode);        \n\
         }\n"
 
         const fileexecutable = "\n\
-        const int fileexecutable(const std::string_view &file) {          \n\
+        const int fileexecutable(const std::string &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_exec)!= std::filesystem::perms::none);        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) &&  (buf.st_mode & S_IXUSR);        \n\
         }\n"
 
         const filewritable = "\n\
-        const int filewritable(const std::string_view &file) {          \n\
+        const int filewritable(const std::string &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_write)!= std::filesystem::perms::none);        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) &&  (buf.st_mode & S_IWUSR);        \n\
         }\n"
 
         const filereadable = "\n\
-        const int filereadable(const std::string_view &file) {          \n\
+        const int filereadable(const std::string &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_read)!= std::filesystem::perms::none);        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) &&  (buf.st_mode & S_IRUSR);        \n\
         }\n"
 
         const direxists = "\n\
-        const int direxists(const std::string_view &file) {                                   \n\
+        const int direxists(const std::string &file) {                                   \n\
+            struct stat buf;                                                \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_directory(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISDIR(buf.st_mode);        \n\
         }\n"
 
         const envCommand = "\n\
-        const int mystoi(const std::string_view &str, int defreturn = -1) { \n\
+        const int mystoi(const std::string &str, int defreturn = -1) { \n\
             if (!str.empty()) return std::stoi(str.data()); \n\
             return defreturn; \n\
         }\n\
-        const int mystoiz(const std::string_view &str) { \n\
+        const int mystoiz(const std::string &str) { \n\
             return mystoi(str, 0);\n\
         }\n\
         \n\
-        const std::string get_env(const std::string_view &cmd) { \n\
+        const std::string get_env(const std::string &cmd) { \n\
             const char *env = getenv(cmd.data());\n\
             return env ? env : \"\"; \n\
         }\n\
         \n\
-        const int envexists_and_hascontent(const std::string_view &cmd) { \n\
+        const int envexists_and_hascontent(const std::string &cmd) { \n\
             char *env = getenv(cmd.data()); \n\
             return env ? env[0] != '\\0' > 0 : 0; \n\
         }\n\
         \n\
-        const int envempty(const std::string_view &cmd) { \n\
+        const int envempty(const std::string &cmd) { \n\
             char *env = getenv(cmd.data()); \n\
             return env ? env[0] == '\\0' : true; \n\
         }\n\
-        const int envset(const std::string_view &cmd) { \n\
+        const int envset(const std::string &cmd) { \n\
             char *env = getenv(cmd.data()); \n\
             return env ? true : false; \n\
         }\n\
         \n\
-        const std::string_view set_env(const std::string_view &cmd, const std::string &value) { \n\
+        const std::string set_env(const std::string &cmd, const std::string &value) { \n\
             if (value.back() == '\\n')\n\
                 setenv(cmd.data(), value.substr(0, value.size()-1).c_str(), 1);\n\
             else \n\
@@ -2666,25 +2677,25 @@ class ConvertBash {
             return \"\";\n\
         }\n\
         \n\
-        const std::string_view set_env(const std::string_view &cmd, const float value) { \n\
+        const std::string set_env(const std::string &cmd, const float value) { \n\
             setenv(cmd.data(), std::to_string(value).c_str(), 1);\n\
             return \"\";\n\        }\n\
         \n\
-        const std::string_view set_env(const std::string_view &cmd, const int value) { \n\
+        const std::string set_env(const std::string &cmd, const int value) { \n\
             setenv(cmd.data(), std::to_string(value).c_str(), 1);\n\
             return \"\";\n\
         }\n\
         \n\
-        void set_env(const std::string_view &cmd, const char value) { \n\
+        void set_env(const std::string &cmd, const char value) { \n\
             setenv(cmd.data(), std::to_string(value).c_str(), 1);\n\
         }\n\
-        const std::string set_env_ifunset(const std::string_view &cmd, const std::string_view &value) {\n\
+        const std::string set_env_ifunset(const std::string &cmd, const std::string &value) {\n\
         \n\
             char *env = getenv(cmd.data()); \n\
             if (!env) { set_env(cmd, value.data()); return std::string(value.data()); } \n\
             return env;\n\
         }\n\
-        const std::string set_env_ifempty(const std::string_view &cmd, const std::string_view &value) { \n\
+        const std::string set_env_ifempty(const std::string &cmd, const std::string &value) { \n\
             char *env = getenv(cmd.data()); \n\
             if (!env) { set_env(cmd, value.data()); return std::string(value);}\n\
             if (envempty(cmd)) { set_env(cmd.data(), value.data()); return std::string(value.data());}\n\
@@ -2754,7 +2765,7 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
     return nChild;\n\
 }\n\
 \n\
-void execcommand(const std::string_view &cmd, int & exitstatus, std::string &result, bool stdout = true, bool quoteparams = false) \n\
+void execcommand(const std::string &cmd, int & exitstatus, std::string &result, bool stdout = true, bool quoteparams = false) \n\
 {\n\
     std::string cmd_ (cmd.data());\n\
     size_t offset = cmd_.find(\" \");\n\
@@ -2779,7 +2790,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
     wordfree(&p);\n\
 }\n\
         \n\
-        const int checkexec(const std::string_view &cmd) { \n\
+        const int checkexec(const std::string &cmd) { \n\
             int exitstatus; \n\
             std::string result;\n\
             if (!cmd.empty()) {\n\
@@ -2789,7 +2800,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             }\n\
             return exitstatus == 0; \n\
         }\n\
-        const int checkbuiltinexec(const std::string_view &cmd) { \n\
+        const int checkbuiltinexec(const std::string &cmd) { \n\
             int exitstatus; \n\
             std::string result;\n\
             if (!cmd.empty()) {\n\
@@ -2800,7 +2811,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             return exitstatus == 0; \n\
         }\n\
         \n\
-        const std::string exec(const std::string_view &cmd, bool quoteparams = false) {\n\
+        const std::string exec(const std::string &cmd, bool quoteparams = false) {\n\
             int exitstatus; \n\
             std::string result;\n\
             execcommand(cmd, exitstatus, result, true, quoteparams);\n\
@@ -2808,7 +2819,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             return result; \n\
         }\n\
         \n\
-        const std::string execnoout(const std::string_view &cmd) {\n\
+        const std::string execnoout(const std::string &cmd) {\n\
             int exitstatus; \n\
             std::string result; \n\
             execcommand(cmd, exitstatus, result, false);\n\
@@ -2836,7 +2847,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             }\n\
         }\n\
         \n\
-        std::vector <std::string> split(const std::string_view &s, bool ifs = true) {\n\
+        std::vector <std::string> split(const std::string &s, bool ifs = true) {\n\
             std::string delim = \" \\t\\n\"; \n\
             std::vector <std::string> elems;\n\
             const char *userdelim = getenv(\"IFS\");\n\
@@ -2851,7 +2862,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         }\n"
 
         const regexstr = "\n\
-        const bool regexmatch(const std::string_view &subject, const std::string_view &pattern)\n\
+        const bool regexmatch(const std::string &subject, const std::string &pattern)\n\
         {\n\
             pcre *re;\n\
             const char *error;\n\
@@ -2877,14 +2888,14 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             return 1;                                           \n\
         }                                                       \n\
         \n\
-        const bool isregexstring(const std::string_view &str)\n\
+        const bool isregexstring(const std::string &str)\n\
         {\n\
             if (str.find_first_of(\"*?\", 0) != std::string::npos)\n\
                 return true;\n\
             return false;\n\
         }\n\
         \n\
-        std::vector<std::string> globvector(const std::string_view& pattern){\n\
+        std::vector<std::string> globvector(const std::string& pattern){\n\
             glob_t glob_result;\n\
             glob(pattern.data(), GLOB_TILDE, NULL,& glob_result);\n\
             std::vector <std::string> files;\n\
@@ -2895,7 +2906,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             return files;\n\
         }\n\
         \n\
-        std::vector <std::string> regexsplit(const std::string_view &str)\n\
+        std::vector <std::string> regexsplit(const std::string &str)\n\
         {\n\
             if (isregexstring(str)) {\n\
                 std::vector <std::string> files = globvector(str);\n\
@@ -2907,7 +2918,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         }\n"
 
         const echostr = "\n\
-        void echom(const std::string_view &str, size_t endoffset = std::string::npos)\n\
+        void echom(const std::string &str, size_t endoffset = std::string::npos)\n\
         {\n\
             size_t startoffset = 0;\n\
             bool endprint = true;\n\
@@ -2931,7 +2942,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             set_env(\"?\", 0);\n\
         }\n\
         \n\
-        void echov(const std::string_view &str)\n\
+        void echov(const std::string &str)\n\
         {\n\
             size_t endoffset = str.find_last_not_of(\" \\n\");\n\
             if (endoffset != std::string::npos) {\n\
@@ -2952,7 +2963,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             }\n\
             return (str); \n\
         }\n\
-        void echo(const std::string_view &str)\n\
+        void echo(const std::string &str)\n\
         {\n\
             echov(str); \n\
         }\n\
@@ -2968,7 +2979,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         }\n"
 
         const readstr = "\n\
-        std::string readval(const std::string_view &var) {\n\
+        std::string readval(const std::string &var) {\n\
             std::string line;\n\
             if (!std::getline(std::cin, line)) {\n\
                 set_env(\"?\", -1);\n\
@@ -3009,9 +3020,12 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         }\n"
 
         const cdstr = "\n\
-        void cd(const std::string_view &directory) {\n\
-            std::filesystem::current_path(directory);\n\
-            set_env(\"PWD\", std::filesystem::current_path());\n\
+        void cd(const std::string &directory) {\n\
+            std::vector<char> cwd;\n\
+            chdir(directory.data());\n\
+            long size = pathconf(\".\", _PC_PATH_MAX);\n\
+            cwd.reserve(size);\n\
+            set_env(\"PWD\", getcwd(cwd.data(), (size_t)size));\n\
             set_env(\"?\", 0);\n\
         }\n"
 
@@ -3049,23 +3063,23 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         const processargsstr = text
 
         const incrementstr = "\n\
-        const std::string pre_increment(const std::string_view &variable) {\n\
+        const std::string pre_increment(const std::string &variable) {\n\
             int val = mystoi(get_env(variable), 0) + 1;\n\
             set_env(variable, val);\n\
             return std::to_string(val);\n\
         }\n\
-        const std::string post_increment(const std::string_view &variable) {\n\
+        const std::string post_increment(const std::string &variable) {\n\
             int initval = mystoi(get_env(variable), 0);\n\
             int val = initval + 1;\n\
             set_env(variable, val);\n\
             return std::to_string(initval);\n\
         }\n\
-        const std::string pre_decrement(const std::string_view &variable) {\n\
+        const std::string pre_decrement(const std::string &variable) {\n\
             int val = mystoi(get_env(variable), 0) - 1;\n\
             set_env(variable, val);\n\
             return std::to_string(val);\n\
         }\n\
-        const std::string post_decrement(const std::string_view &variable) {\n\
+        const std::string post_decrement(const std::string &variable) {\n\
             int initval = mystoi(get_env(variable), 0);\n\
             int val = initval - 1;\n\
             set_env(variable, val);\n\
@@ -3182,37 +3196,37 @@ std::streambuf *backupout = std::cout.rdbuf();\n\
             "    std::string m_backup;\n" +
             "    std::string m_env;\n" +
             "    public:\n" +
-            "    scopedvariable(const std::string_view &env, const std::string_view &newval) {\n" +
+            "    scopedvariable(const std::string &env, const std::string &newval) {\n" +
             "        m_env = env;\n" +
             "        m_backup = get_env(env);\n" +
             "        set_env(env.data(), newval.data());\n" +
             "    }\n" +
-            "    scopedvariable(const std::string_view &env) {\n" +
+            "    scopedvariable(const std::string &env) {\n" +
             "        m_env = env;\n" +
             "        m_backup = get_env(env);\n" + 
             "    }\n" +
             "    ~scopedvariable(){set_env(m_env.c_str(), m_backup);}\n" +
             "};\n"
 
-        let upperstr = "std::string upper(const std::string_view &str)\n" +
+        let upperstr = "std::string upper(const std::string &str)\n" +
         "{\n" +
         "    std::string s(str);\n" +
         "    std::transform(s.begin(), s.end(), s.begin(), ::toupper);\n" +
         "    return s;\n" +
         "}\n"
-        let lowerstr = "std::string lower(const std::string_view &str)\n" +
+        let lowerstr = "std::string lower(const std::string &str)\n" +
         "{\n" +
         "    std::string s(str);\n" +
         "    std::transform(s.begin(), s.end(), s.begin(), ::tolower);\n" +
         "    return s;\n" +
         "}\n"
-        let uppercapitalize = "std::string uppercapitalize(const std::string_view &str)\n" +
+        let uppercapitalize = "std::string uppercapitalize(const std::string &str)\n" +
         "{\n" +
         "    std::string s(str);\n" +
         "    s[0] = toupper(s[0]);\n" +
         "    return s;\n" +
         "}\n"
-        let lowercapitalize = "std::string lowercapitalize(const std::string_view &str)\n" +
+        let lowercapitalize = "std::string lowercapitalize(const std::string &str)\n" +
         "{\n" +
         "    std::string s(str);\n" +
         "    s[0] = tolower(s[0]);\n" +
@@ -3278,13 +3292,12 @@ try {
         "#include <iterator>\n" +
         "#include <glob.h>\n" +
         "#include <pcre.h>\n" +
-        "#include <filesystem>\n" +
+        "#include <sys/stat.h>\n" +
         "#include <sys/types.h>\n" +
         "#include <sys/wait.h>\n" +
         "#include <fcntl.h>\n" +
         "#include <fstream>\n" +
         "#include <numeric>\n" +
-        "#include <string_view>\n" +
         "#include <wordexp.h>\n" +
         "#define PIPE_READ 0\n" +
         "#define PIPE_WRITE 1\n" +
