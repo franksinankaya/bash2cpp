@@ -718,13 +718,26 @@ class ConvertBash {
             let negative = false
             if (clausecommands.commands && clausecommands.commands[0].name && clausecommands.commands[0].name.text == "!") {
                 negative = true
+                if (clausecommands.commands[0].suffix) {
+                    clausecommands.commands[0].name = clausecommands.commands[0].suffix[0]
+                    clausecommands.commands[0].suffix.shift()
+                } else {
+                    this.terminate(clausecommands.commands[0])
+                }
+            } else if (name == "!") {
+                if (clausecommands.suffix) {
+                    clausecommands.name = clausecommands.suffix[0]
+                    clausecommands.suffix.shift()
+                } else {
+                    this.terminate(clausecommands.commands[0])
+                }
             }
 
             if ((name != "!") && !negative) {
                 clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, false, true, [], true, async) + ")"
             }
             else {
-                const clauseexpansion = this.convertExecCommand(clausecommands, false, false, [], true, async)
+                const clauseexpansion = this.convertExecCommand(clausecommands, false, true, [], true, async)
                 clause = "!" + cmd + "(" + clauseexpansion + ")"
             }
         }
