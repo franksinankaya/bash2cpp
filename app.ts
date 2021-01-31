@@ -1605,10 +1605,7 @@ class ConvertBash {
             for (i = 0; i < commandwordlist.length; i++) {
                 if (commandwordlist[i].expansion) {
                     if (vector) {
-                        text += "{\n"
-                        text += "auto newvar = regexsplit(" + this.convertCommand(commandwordlist[i]) + ");\n"
-                        text += "vals.insert( vals.end(), newvar.begin(), newvar.end() );"
-                        text += "}\n"
+                        text += "regexsplit(vals, " + this.convertCommand(commandwordlist[i]) + ");\n"
                     }
                     else
                         text += "regexsplit(" + this.convertCommand(commandwordlist[i]) + ")"
@@ -2898,6 +2895,17 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                 split(elems, std::string(s.data()), delim); \n\
             }\n\
             return elems;\n\
+        }\n\
+        void split(std::vector <std::string> &elems, const std::string_view &s, bool ifs= true) {\n\
+            std::string delim = \" \\t\\n\"; \n\
+            const char *userdelim = getenv(\"IFS\");\n\
+            if ((userdelim != NULL) && ifs)\n\
+            {\n\
+                delim = userdelim;\n\
+            }\n\
+            { \n\
+                split(elems, std::string(s.data()), delim); \n\
+            }\n\
         }\n"
 
         const regexstr = "\n\
@@ -2944,6 +2952,14 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             globfree(& glob_result);\n\
             return files;\n\
         }\n\
+        void globvector(std::vector<std::string> &elems, const std::string_view& pattern){\n\
+            glob_t glob_result;\n\
+            glob(pattern.data(), GLOB_TILDE, NULL,& glob_result);\n\
+            for (unsigned int i = 0; i < glob_result.gl_pathc; ++i) {\n\
+                elems.emplace_back(std::string(glob_result.gl_pathv[i]));\n\
+            }\n\
+            globfree(& glob_result);\n\
+        }\n\
         \n\
         std::vector <std::string> regexsplit(const std::string_view &str)\n\
         {\n\
@@ -2954,6 +2970,18 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                 return files;\n\
             }\n\
             return split(str);\n\
+        }\n\
+        void regexsplit(std::vector <std::string> &list, const std::string_view &str)\n\
+        {\n\
+            if (isregexstring(str)) {\n\
+                std::vector <std::string> files = globvector(str);\n\
+                for (const auto &entry : files){\n\
+                    std::cout << entry << std::endl;\n\
+                    list.emplace_back(entry);\n\
+                };\n\
+                return;\n\
+            }\n\
+            split(list, str);\n\
         }\n"
 
         const echostr = "\n\
