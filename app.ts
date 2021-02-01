@@ -1502,7 +1502,7 @@ class ConvertBash {
                     text += "\"" + i + "\""
                 else
                     text += i
-                if (i != (end))
+                if ((i + increment) <= (end))
                     text += delimiter
             }
         } else {
@@ -3064,25 +3064,33 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                 startoffset = 3;\n\
                 endprint = false;\n\
             }\n\
+            if (endprint && (endoffset == std::string::npos) && str.back() == ' ') {\n\
+                endoffset = str.size() - 1;\n\
+            }\n\
+            while (endprint && endoffset && (endoffset != std::string::npos) && str[endoffset - 1] == ' ') {\n\
+                endoffset--;\n\
+            }\n\
             {\n\
                 size_t initial_pos = startoffset;\n\
                 size_t start_pos = startoffset;\n\
                 while ((start_pos = str.find(\"  \", start_pos)) != std::string::npos) {\n\
-                    std::cout << str.substr(initial_pos, start_pos); \n\
+                    std::cout << str.substr(initial_pos, start_pos - initial_pos); \n\
                     std::cout << \" \"; \n\
                     start_pos += std::string(\"  \").length(); \n\
                     initial_pos = start_pos; \n\
                 }\n\
-                std::cout << str.substr(initial_pos, endoffset); \n\
+                if (endoffset != std::string::npos)\n\
+                    std::cout << str.substr(initial_pos, endoffset - initial_pos); \n\
+                else \n\
+                    std::cout << str.substr(initial_pos, endoffset); \n\
             }\n\
-            if (endprint && (endoffset != std::string::npos)) endprint = str[endoffset] != '\\n';\n\
             if (endprint) std::cout << std::endl; \n\
             set_env(\"?\", 0);\n\
         }\n\
         \n\
         void echov(const std::string_view &str)\n\
         {\n\
-            size_t endoffset = str.find_last_not_of(\" \\n\");\n\
+            size_t endoffset = str.find_last_not_of(\"\\n\");\n\
             if (endoffset != std::string::npos) {\n\
                 echom(str, endoffset + 1);\n\
             } else {\n\
@@ -3140,7 +3148,11 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                     std::vector<std::string>::const_iterator last = tokens.begin() + tokens.size();\n\
                     std::vector<std::string> remaining(first, last);\n\
                     std::string s;\n\
-                    for (const auto &piece : remaining) s += piece + \" \";\n\
+                    for (int count = 0; count < remaining.size(); count++) {\n\
+                        s += remaining[count];\n\
+                        if (count != (remaining.size() - 1))\n\
+                            s +=  \" \";\n\
+                    }\n\
                     set_env(keys.back().c_str(), s.c_str());\n\
                 }\n\
             } else {\n\
