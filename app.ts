@@ -2572,9 +2572,13 @@ class ConvertBash {
                     let previousc = c ? (c - 1): 0
                     let previousscope = "scope" + previousc.toString()
                     let func = "scopeexitcincout "
+                    let funcvariable = scope
+                    if (c == (this.pipelines[v][0].commands.length - 1)) {
+                        funcvariable += "(stdout)"
+                    }
                     if (c == 0)
                         func = "scopeexitcout "
-                    text += func + scope + ";\n"
+                    text += func + funcvariable + ";\n"
                     if (c > 0)
                         text += scope + ".writecin(" + previousscope + ".buf());\n"
                     let coordinate = [this.pipelines[v][1], this.pipelines[v][2]]
@@ -2593,8 +2597,8 @@ class ConvertBash {
                 }
                 text += "\n"
                 let finalres = "scope" + (this.pipelines[v][0].commands.length - 1).toString() + ".buf().str()"
-                text += "if (stdout)\n"
-                text += "std::cout << " + finalres + ";\n"
+                //text += "if (stdout)\n"
+                //text += "std::cout << " + finalres + ";\n"
                 text += "return " + finalres + "; \n"
                 text += "}\n"
                 text += "\n"
@@ -3241,7 +3245,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
     "};\n" +
     "class scopeexitcincout {\n\
     \n\
-std::streambuf *backupout = std::cout.rdbuf();\n\
+    std::streambuf *backupout = std::cout.rdbuf();\n\
 	std::streambuf *backupin = std::cin.rdbuf();\n\
 	std::stringstream buffer;\n\
 	int readfd[2];\n\
@@ -3253,8 +3257,8 @@ std::streambuf *backupout = std::cout.rdbuf();\n\
 	~scopeexitcincout() {\n\
 		release();\n\
 	}\n\
-	scopeexitcincout() {\n\
-		std::cout.rdbuf(buffer.rdbuf());\n\
+	scopeexitcincout(bool stdout = false) {\n\
+		if (!stdout) std::cout.rdbuf(buffer.rdbuf());\n\
 		pipe(readfd);\n\
 		m_inbackup = dup(0);\n\
 		dup2(readfd[0], STDIN_FILENO); \n\
