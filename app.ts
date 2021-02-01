@@ -1576,9 +1576,8 @@ class ConvertBash {
         }
         else if (!commandwordlist)
         {
-            text += "std::vector<std::string> vals = {\n"
-            text += "regexsplit(get_env(\"@\"))\n"
-            text += "};\n"
+            text += "std::vector<std::string> vals; \n"
+            text += "regexsplit(vals, get_env(\"@\"));\n"
             countstr = "int length = vals.size();\n"
         }
         else {
@@ -3301,14 +3300,14 @@ std::streambuf *backupout = std::cout.rdbuf();\n\
             "std::vector<std::string> envs;\n" +
             "std::string delimiter(\"\\n\");\n" +
             "split(envs, execnoout(\"bash -c 'set -a && source \" + fname + \" && set +a && env'\"), delimiter);\n" +
-            "delimiter=\"=\";\n" +
             "for (auto &v: envs) {\n"  +
-            "    std::vector<std::string> keyvalue;\n"  +
-            "    split(keyvalue, v, delimiter);\n"  +
-            "    if (keyvalue.size() != 2) continue;\n"  +
-            "    if (keyvalue[0] == \"#\") continue;\n" +
-            "    if (keyvalue[1] == \"\") continue;\n" +
-            "    set_env(keyvalue[0], keyvalue[1]);\n"  +
+            "    size_t offset = v.find(\"=\");\n"  +
+            "    if (offset == std::string::npos) continue;\n"  +
+            "    std::string key = v.substr(0, offset);\n"  +
+            "    std::string value = v.substr(offset + 1);\n"  +
+            "    if (key == \"#\") continue;\n" +
+            "    if (value == \"\") continue;\n" +
+            "    set_env(key, value);\n"  +
             "}\n"  +
         "}\n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
