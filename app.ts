@@ -3075,6 +3075,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                 }\n\
                 std::cout << str.substr(initial_pos, endoffset); \n\
             }\n\
+            if (endprint && (endoffset != std::string::npos)) endprint = str[endoffset] != '\\n';\n\
             if (endprint) std::cout << std::endl; \n\
             set_env(\"?\", 0);\n\
         }\n\
