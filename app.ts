@@ -2782,10 +2782,30 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
         close(aStdinPipe[PIPE_READ]);\n\
         close(aStdoutPipe[PIPE_WRITE]);\n\
 \n\
+        size_t available = 0;\n\
+        const int bufsize = 512;\n\
+        char databuf[bufsize + 1];\n\
+        databuf[bufsize] = 0;\n\
         while (read(aStdoutPipe[PIPE_READ], &nChar, 1) == 1) {\n\
             if (stdout)\n\
                 std::cout << nChar;\n\
             if (resultcollect) result += nChar;\n\
+            \n\
+            ioctl(aStdoutPipe[PIPE_READ], FIONREAD, &available);\n\
+            while (available / bufsize) {\n\
+                read(aStdoutPipe[PIPE_READ], &databuf[0], bufsize);\n\
+                if (stdout)\n\
+                    std::cout << databuf;\n\
+                if (resultcollect) result += databuf;\n\
+                available -= bufsize;\n\
+            }\n\
+            if (available % bufsize) {\n\
+                read(aStdoutPipe[PIPE_READ], &databuf[0], available % bufsize);\n\
+                databuf[available % bufsize] = 0;\n\
+                if (stdout)\n\
+                    std::cout << databuf;\n\
+                if (resultcollect) result += databuf;\n\
+            }\n\
         }\n\
 \n\
         close(aStdinPipe[PIPE_WRITE]);\n\
@@ -3411,6 +3431,7 @@ try {
         "#include <unistd.h>\n" +
         "#include <stdarg.h>\n" +
         "#include <memory>\n" +
+        "#include <sys/ioctl.h>\n" +
         "#include <iostream>\n" +
         "#include <regex>\n" +
         "#include <iterator>\n" +
