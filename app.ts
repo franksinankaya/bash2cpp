@@ -1918,7 +1918,7 @@ class ConvertBash {
         return text
     }
 
-    public handleCommands(command:any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any) {
+    public handleCommands(command:any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any, collectresult: any = true) {
         let nametext = this.convertCommand(name)
         if (nametext[0] == '"' && nametext[nametext.length - 1] == '"') {
             nametext = nametext.substring(1, nametext.length - 2)
@@ -2030,7 +2030,12 @@ class ConvertBash {
                             //quoteparams = true
                             text += "," + quoteparams + ")"
                         } else {
-                            text += ")"
+                            if (!collectresult) {
+                                text += ", false, false)"
+                            }
+                            else {
+                                text += ")"
+                            }
                         }
                     }
                     return text
@@ -2127,7 +2132,8 @@ class ConvertBash {
         return "redirects" + currentlength.toString() + "(" + maintext + ")"
     }
 
-    public convertExecCommand(command: any, issuesystem: any = true, handlecommands: any = true, coordinate = [], stdout: any = true, async: any = true): string {
+    public convertExecCommand(command: any, issuesystem: any = true, handlecommands: any = true,
+                              coordinate = [], stdout: any = true, async: any = true, collectresults: any = true): string {
         let currentline = ""
         let currentstr = ""
         if (command.async && async) {
@@ -2176,7 +2182,7 @@ class ConvertBash {
             //suffix = this.trimTrailingSpaces(suffix)
             let redirecttext = ""
             if (command.suffix && ignoreRedirects) {
-                const maintext = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem)
+                const maintext = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem, collectresults)
                 redirecttext = maintext
                 for (let i = 0; i < command.suffix.length; i++) {
                     if ((command.suffix[i].type == "Redirect")) {
@@ -2190,7 +2196,7 @@ class ConvertBash {
             }
 
             if (handlecommands) {
-                let t = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem)
+                let t = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem, collectresults)
                 let hasRedirect = false
                 if (command.suffix) {
                     for (let i = 0; i < command.suffix.length; i++) {
@@ -2255,7 +2261,10 @@ class ConvertBash {
         let pipeline = false
         if (command.loc.start >= 0 && command.loc.end > 0) {
             for (let i = 0; i < command.commandAST.commands.length; i++) {
-                text += this.convertExecCommand(command.commandAST.commands[i], false, true, [], false)
+                let collectresults = true
+                if (command.commandAST.commands[0].type == "Pipeline")
+                    collectresults = false
+                text += this.convertExecCommand(command.commandAST.commands[i], false, true, [], false, collectresults)
                 if (command.commandAST.commands[0].type == "Pipeline")
                     pipeline = true
             }
@@ -2578,7 +2587,7 @@ class ConvertBash {
                             this.terminate(cmd)
                         }
                     }
-                    text += this.convertExecCommand(cmd, true, true, coordinate) + ";\n"
+                    text += this.convertExecCommand(cmd, true, true, coordinate, true, true, false) + ";\n"
                     text += scope + ".release();\n"
                     text += "\n"
                 }
@@ -2735,7 +2744,7 @@ class ConvertBash {
         }\n"
 
         const execCommand = "\n\
-int createChild(std::vector<char *> &aArguments, std::string &result, bool stdout) {\n\
+int createChild(std::vector<char *> &aArguments, std::string &result, bool stdout, bool resultcollect) {\n\
     int aStdinPipe[2];\n\
     int aStdoutPipe[2];\n\
     int nChild;\n\
@@ -2776,7 +2785,7 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
         while (read(aStdoutPipe[PIPE_READ], &nChar, 1) == 1) {\n\
             if (stdout)\n\
                 std::cout << nChar;\n\
-            result += nChar;\n\
+            if (resultcollect) result += nChar;\n\
         }\n\
 \n\
         close(aStdinPipe[PIPE_WRITE]);\n\
@@ -2797,7 +2806,7 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
     return nChild;\n\
 }\n\
 \n\
-void execcommand(const std::string_view &cmd, int & exitstatus, std::string &result, bool stdout = true, bool quoteparams = false) \n\
+void execcommand(const std::string_view &cmd, int & exitstatus, std::string &result, bool stdout = true, bool quoteparams = false, bool resultcollect = true) \n\
 {\n\
     std::string cmd_ (cmd.data());\n\
     size_t offset = cmd_.find(\" \");\n\
@@ -2818,7 +2827,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         toks.emplace_back(w[i]);\n\
     }\n\
     toks.push_back(NULL);\n\
-    exitstatus = createChild(toks, result, stdout);\n\
+    exitstatus = createChild(toks, result, stdout, resultcollect);\n\
     wordfree(&p);\n\
 }\n\
         \n\
@@ -2826,7 +2835,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             int exitstatus; \n\
             std::string result;\n\
             if (!cmd.empty()) {\n\
-                execcommand(cmd, exitstatus, result);\n\
+                execcommand(cmd, exitstatus, result, true, false, false);\n\
             } else {\n\
                 exitstatus = mystoi(get_env(\"?\"), 0);\n\
             }\n\
@@ -2848,18 +2857,18 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             return exitstatus == 0; \n\
         }\n\
         \n\
-        const std::string exec(const std::string_view &cmd, bool quoteparams = false) {\n\
+        const std::string exec(const std::string_view &cmd, bool quoteparams = false, bool  collectresults = true) {\n\
             int exitstatus; \n\
             std::string result;\n\
-            execcommand(cmd, exitstatus, result, true, quoteparams);\n\
+            execcommand(cmd, exitstatus, result, true, quoteparams, collectresults);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
         }\n\
         \n\
-        const std::string execnoout(const std::string_view &cmd) {\n\
+        const std::string execnoout(const std::string_view &cmd, bool collectresults = true) {\n\
             int exitstatus; \n\
             std::string result; \n\
-            execcommand(cmd, exitstatus, result, false);\n\
+            execcommand(cmd, exitstatus, result, false, false,  collectresults);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
         }\n"
