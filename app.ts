@@ -821,7 +821,7 @@ class ConvertBash {
         }
         text += "std::string " + name + "(std::initializer_list<std::string> list) {\n"
         text += "scopeparams prms" + name + "(list, " + parseInt(maxargs) + ");\n"
-        text += "scopeexitcout scope;\n"
+        text += "scopeexitcout scope(true);\n"
 
         text += body + "; \n"
         text += "return scope.buf().str();\n"
@@ -2562,8 +2562,10 @@ class ConvertBash {
                     let redirectc = "redirectStream" + c.toString()
                     let previousc = c ? (c - 1): 0
                     let previousscope = "scope" + previousc.toString()
-
-                    text += "scopeexitcincout " + scope + ";\n"
+                    let func = "scopeexitcincout "
+                    if (c == 0)
+                        func = "scopeexitcout "
+                    text += func + scope + ";\n"
                     if (c > 0)
                         text += scope + ".writecin(" + previousscope + ".buf());\n"
                     let coordinate = [this.pipelines[v][1], this.pipelines[v][2]]
@@ -3281,15 +3283,19 @@ std::streambuf *backupout = std::cout.rdbuf();\n\
         "    ~scopeexitcoutfile(){std::cout.rdbuf(m_backup);}\n" +
         "};\n" +
         "class scopeexitcout{\n" +
+        "    bool m_stdout = false;\n" +
         "    std::streambuf *m_backup;\n" +
         "    std::stringstream m_redirectStream;\n" +
+        "    bool m_released = false;" +
         "    public:\n" +
         "    std::stringstream &buf(){ return m_redirectStream;} \n" +
-        "    scopeexitcout(){\n" +
+        "    scopeexitcout(bool stdout = false){\n" +
+        "        m_stdout = stdout;\n" +
         "        m_backup = std::cout.rdbuf();\n" +
         "        std::cout.rdbuf(m_redirectStream.rdbuf());\n" +
         "    }\n" +
-        "    ~scopeexitcout(){std::cout.rdbuf(m_backup); std::cout << m_redirectStream.str();}\n" +
+        "    ~scopeexitcout(){release();}\n" +
+        "    void release(){if (m_released) return; std::cout.rdbuf(m_backup); if (m_stdout) std::cout << m_redirectStream.str(); m_released = true;}\n" +
         "};\n" +
         "class scopedvariable{\n" +
             "    std::string m_backup;\n" +
