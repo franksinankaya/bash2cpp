@@ -2863,6 +2863,42 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         }\n"
 
         const splitCommand = "\n\
+        void splitenvs(const std::string &str)\n\
+        {\n\
+            // Vector of string to save tokens  \n\
+            size_t pos = 0; \n\
+            std::string delimiter = \"\\n\";\n\
+            size_t prev = 0; \n\
+            if (str.front() == '\\\'') prev++;\n\
+                                                \n\
+            while ((pos = str.find_first_of(delimiter, prev)) != std::string::npos) {\n\
+                if (pos > prev)\n\
+                {\n\
+                    std::string v = str.substr(prev, pos-prev);\n\
+                    size_t offset = v.find(\"=\");\n\
+                    if (offset != std::string::npos) {;\n\
+                        std::string key = v.substr(0, offset);\n\
+                        std::string value = v.substr(offset + 1);\n\
+                        if ((key != \"#\") && (value != \"\")) \n\
+                            set_env(key, value);\n\
+                    }\n\
+                }\n\
+                prev = pos+1;\n\
+            }\n\
+            if (prev < str.length()){\n\
+                size_t end = str.length() - prev;\n\
+                if (str.back() == '\\\'') end--;\n\
+                std::string v = str.substr(prev, end);\n\
+                size_t offset = v.find(\"=\");\n\
+                if (offset != std::string::npos) {;\n\
+                    std::string key = v.substr(0, offset);\n\
+                    std::string value = v.substr(offset + 1);\n\
+                    if ((key != \"#\") && (value != \"\")) \n\
+                        set_env(key, value);\n\
+                }\n\
+            }\n\
+        }\n\
+        \n\
         void split(std::vector <std::string> &tokens, const std::string &str, std::string &delimiter)\n\
         {\n\
             // Vector of string to save tokens  \n\
@@ -3299,16 +3335,11 @@ std::streambuf *backupout = std::cout.rdbuf();\n\
         "{\n"  +
             "std::vector<std::string> envs;\n" +
             "std::string delimiter(\"\\n\");\n" +
-            "split(envs, execnoout(\"bash -c 'set -a && source \" + fname + \" && set +a && env'\"), delimiter);\n" +
-            "for (auto &v: envs) {\n"  +
-            "    size_t offset = v.find(\"=\");\n"  +
-            "    if (offset == std::string::npos) continue;\n"  +
-            "    std::string key = v.substr(0, offset);\n"  +
-            "    std::string value = v.substr(offset + 1);\n"  +
-            "    if (key == \"#\") continue;\n" +
-            "    if (value == \"\") continue;\n" +
-            "    set_env(key, value);\n"  +
-            "}\n"  +
+            "int exitstatus;\n" +
+            "std::string result;\n" +
+            "std::string cmd = \"bash -c 'set -a && source \" + fname + \" && set +a && env'\";\n" +
+            "execcommand(cmd, exitstatus, result, false);\n" +
+            "splitenvs(result);\n" +
         "}\n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
             + charfileexists + filereadable + fileexecutable + filewritable + direxists + envCommand + execCommand + splitCommand + regexstr + echostr
