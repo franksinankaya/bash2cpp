@@ -3100,9 +3100,10 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         {\n\
             const std::string separator = get_env(\"IFS\");\n\
             std::string str = \"\";\n\
-            for (int i = 0; i < vec.size(); i++) {\n\
-                str = str + vec[i];\n\
-                if (i != (vec.size() - 1))\n\
+            int vecsize = vec.size();\n\
+            for (int i = 0; i < vecsize; i++) {\n\
+                str += vec[i];\n\
+                if (i != (vecsize - 1))\n\
                     str += separator;\n\
             }\n\
             return (str); \n\
@@ -3133,27 +3134,29 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             std::vector <std::string> keys;\n\
             split(keys, var);\n\
             split(tokens, line);\n\
-            if (tokens.size()) {\n\
+            int tokensize = tokens.size();\n\
+            int keysize = keys.size();\n\
+            if (tokensize) {\n\
                 int i = 0;\n\
-                for (int j = 0; j < tokens.size(); j++) {\n\
-                    if (i == keys.size())\n\
+                for (int j = 0; j < tokensize; j++) {\n\
+                    if (i == keysize)\n\
                         break;\n\
                     set_env(keys[i].c_str(), tokens[j].c_str());\n\
                     i++;\n\
                 }\n\
-                if (tokens.size() > keys.size()) {\n\
-                    int first = keys.size() - 1;\n\
-                    int last = tokens.size();\n\
+                if (tokensize > keysize) {\n\
+                    int first = keysize - 1;\n\
+                    int last = tokensize;\n\
                     std::string s;\n\
                     for (int count = first; count < last; count++) {\n\
                         s += tokens[count];\n\
-                        if (count != (tokens.size() - 1))\n\
+                        if (count != (tokensize - 1))\n\
                             s +=  \" \";\n\
                     }\n\
                     set_env(keys.back().c_str(), s.c_str());\n\
                 }\n\
             } else {\n\
-                if (keys.size())\n\
+                if (keysize)\n\
                     set_env(keys[0].c_str(), line);\n\
                 else \n\
                     set_env(var, line);\n\
@@ -3190,15 +3193,16 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         text += "{\n"
         text += "    int i = 0;\n"
         text += "    std::string combinedargs;\n"
-        text += "    set_env(\"#\", (int)list.size());\n"
+        text += "    int listsize = list.size();\n"
+        text += "    set_env(\"#\", listsize);\n"
         text += "    for (auto elem : list )\n"
         text += "    {\n"
         text += "        set_env(std::to_string(i + 1).c_str(), elem.c_str());\n"
         text += "        combinedargs += std::string(elem.c_str());\n"
-        text += "        if (i != (list.size() - 1)) combinedargs += \" \";\n"
+        text += "        if (i != (listsize - 1)) combinedargs += \" \";\n"
         text += "        i++;\n"
         text += "    }\n"
-        text += "    for (int i = (int)list.size() + 1; i < (maxargs + 1); i++) {\n"
+        text += "    for (int i = listsize + 1; i < (maxargs + 1); i++) {\n"
         text += "        set_env(std::to_string(i).c_str(), \" \");\n"
         text += "    }\n"
         text += "    if (combinedargs.size() == 0) combinedargs = \" \";\n"
