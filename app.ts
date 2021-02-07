@@ -2257,6 +2257,7 @@ class ConvertBash {
 
         let text = ""
         let pipeline = false
+        let isinternal = false
         if (command.loc.start >= 0 && command.loc.end > 0) {
             for (let i = 0; i < command.commandAST.commands.length; i++) {
                 let collectresults = true
@@ -2265,9 +2266,18 @@ class ConvertBash {
                 text += this.convertExecCommand(command.commandAST.commands[i], false, true, [], false, collectresults)
                 if (command.commandAST.commands[0].type == "Pipeline")
                     pipeline = true
+
+                if (this.isKnownFunction(command.commandAST.commands[i].name, command.commandAST.commands[i].suffix)) {
+                    isinternal = true;
+                }
             }
-            if (!pipeline)
-                text = "execnoout(" + text + ")"
+            if (!pipeline) {
+                if (isinternal) {
+                    text = "execinternal(" + command.commandAST.commands[0].name.text + ")"
+                } else {
+                    text = "execnoout(" + text + ")"
+                }
+            }
         }
         return text;
     }
@@ -3352,7 +3362,14 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             "        m_backup = get_env(env);\n" + 
             "    }\n" +
             "    ~scopedvariable(){set_env(m_env.c_str(), m_backup);}\n" +
-            "};\n"
+            "};\n\
+        template <typename F>\n\
+        std::string execinternal(F f)\n\
+        {\n\
+            scopeexitcout scope(false);\n\
+            f({});\n\
+            return scope.buf().str();\n\
+        }\n"
 
         let upperstr = "std::string upper(const std::string_view &str)\n" +
         "{\n" +
