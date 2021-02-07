@@ -2021,7 +2021,10 @@ class ConvertBash {
                 {
                     let text = ""
                     if (issuesystem) {
-                        text += "exec("
+                        if (!collectresult)
+                            text += "execnoresult("
+                        else
+                            text += "exec("
                     }
                     text += this.handleExec(issuesystem, nameexpanded, suffixarray, suffixprocessed, nametext)
                     if (issuesystem) {
@@ -2029,7 +2032,7 @@ class ConvertBash {
                             text += ")"
                         } else {
                             if (!collectresult) {
-                                text += ", false)"
+                                text += ")"
                             }
                             else {
                                 text += ")"
@@ -2892,6 +2895,13 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             execcommand(cmd, exitstatus, result, true, collectresults);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
+        }\n\
+        \n\
+        const void execnoresult(const std::string_view &cmd) {\n\
+            int exitstatus; \n\
+            std::string result;\n\
+            execcommand(cmd, exitstatus, result, true, false);\n\
+            set_env(\"?\", exitstatus);\n\
         }\n\
         \n\
         const std::string execnoout(const std::string_view &cmd, bool collectresults = true) {\n\
