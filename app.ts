@@ -505,7 +505,7 @@ class ConvertBash {
                         clause = "!envempty(" + (!rightexpansion ? "\"" : "") + val + (!rightexpansion ? "\"" : "") + ")"
                     else if (rightexpansion) {
                         val = rightValue
-                        clause = rightValue + ".size() != 0"
+                        clause = rightValue + ".length() != 0"
                     }
                     else
                         clause = rightValue.length == 0 ? "0" : "1"
@@ -2338,10 +2338,10 @@ class ConvertBash {
                     let offset = command.offset
 
                     if (offset < 0)
-                        offset = "get_env(\"" + command.parameter + "\").size() " + offset
+                        offset = "get_env(\"" + command.parameter + "\").length() " + offset
 
                     if (length < 0)
-                        length = "get_env(\"" + command.parameter + "\").size() " + length + " - " + offset
+                        length = "get_env(\"" + command.parameter + "\").length() " + length + " - " + offset
 
                     return "get_env(\"" + command.parameter + "\").substr(" + offset + "," + length + ")";
                 }
@@ -2394,7 +2394,7 @@ class ConvertBash {
                         this.terminate(command)
                     }
                     if (offset < 0)
-                        offset = "get_env(\"" + command.parameter + "\").size() " + offset
+                        offset = "get_env(\"" + command.parameter + "\").length() " + offset
 
                     return "get_env(\"" + command.parameter + "\").substr(" + offset + ",  std::string::npos)";
                 }
@@ -2727,7 +2727,7 @@ class ConvertBash {
         \n\
         const std::string_view set_env(const std::string_view &cmd, const std::string &value) { \n\
             if (value.back() == '\\n')\n\
-                setenv(cmd.data(), value.substr(0, value.size()-1).c_str(), 1);\n\
+                setenv(cmd.data(), value.substr(0, value.length()-1).c_str(), 1);\n\
             else \n\
                 setenv(cmd.data(), value.c_str(), 1);\n\
             return \"\";\n\
@@ -2809,6 +2809,7 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
             if (resultcollect) result += nChar;\n\
             \n\
             ioctl(aStdoutPipe[PIPE_READ], FIONREAD, &available);\n\
+            if (available && resultcollect) result.reserve(available + 2);\n\
             while (available / bufsize) {\n\
                 read(aStdoutPipe[PIPE_READ], &databuf[0], bufsize);\n\
                 if (stdout)\n\
@@ -3003,7 +3004,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             int subject_length;\n\
             int rc;\n\
             \n\
-            subject_length = (int)subject.size();\n\
+            subject_length = (int)subject.length();\n\
             \n\
             re = pcre_compile(pattern.data(), 0, &error, &erroffset, NULL); \n\
             if (re == NULL) return 0; \n\
@@ -3073,7 +3074,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                 endprint = false;\n\
             }\n\
             if (endprint && (endoffset == std::string::npos) && str.back() == ' ') {\n\
-                endoffset = str.size() - 1;\n\
+                endoffset = str.length() - 1;\n\
             }\n\
             while (endprint && endoffset && (endoffset != std::string::npos) && str[endoffset - 1] == ' ') {\n\
                 endoffset--;\n\
@@ -3158,6 +3159,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                     int first = keysize - 1;\n\
                     int last = tokensize;\n\
                     std::string s;\n\
+                    s.reserve(line.length());\n\
                     for (int count = first; count < last; count++) {\n\
                         s += tokens[count];\n\
                         if (count != (tokensize - 1))\n\
@@ -3215,7 +3217,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         text += "    for (int i = listsize + 1; i < (maxargs + 1); i++) {\n"
         text += "        set_env(std::to_string(i).c_str(), \" \");\n"
         text += "    }\n"
-        text += "    if (combinedargs.size() == 0) combinedargs = \" \";\n"
+        text += "    if (combinedargs.length() == 0) combinedargs = \" \";\n"
         text += "        set_env(\"@\", combinedargs);\n"
         text += "}\n"
         const processargsstr = text
@@ -3302,7 +3304,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
 	}\n\
 \n\
 	void writecin(std::stringstream &str) {\n\
-		write(readfd[1], str.str().data(), str.str().size());\n\
+		write(readfd[1], str.str().data(), str.str().length());\n\
 		close(readfd[1]);\n\
 	}\n\
 };\n\
@@ -3455,7 +3457,7 @@ try {
     argstr += "combinedargs += std::string(argv[i]);\n"
     argstr += "if (i != (argc - 1)) combinedargs += \" \";\n"
     argstr += "}\n"
-    argstr += "if (combinedargs.size() == 0) combinedargs = \" \";\n"
+    argstr += "if (combinedargs.length() == 0) combinedargs = \" \";\n"
     argstr += "setenv(\"@\", combinedargs.c_str(), 0);\n"
     argstr += "for (int i = argc; i < (maxargs + 1); i++) {\n"
     argstr += "setenv(std::to_string(i).c_str(), \" \", 0);\n"
