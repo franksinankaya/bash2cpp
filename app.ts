@@ -2025,13 +2025,11 @@ class ConvertBash {
                     }
                     text += this.handleExec(issuesystem, nameexpanded, suffixarray, suffixprocessed, nametext)
                     if (issuesystem) {
-                        let quoteparams = false
                         if ((nametext == "printf") || (nametext == "echo")) {
-                            //quoteparams = true
-                            text += "," + quoteparams + ")"
+                            text += ")"
                         } else {
                             if (!collectresult) {
-                                text += ", false, false)"
+                                text += ", false)"
                             }
                             else {
                                 text += ")"
@@ -2830,22 +2828,19 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
     return nChild;\n\
 }\n\
 \n\
-void execcommand(const std::string_view &cmd, int & exitstatus, std::string &result, bool stdout = true, bool quoteparams = false, bool resultcollect = true) \n\
+void execcommand(const std::string_view &cmd, int & exitstatus, std::string &result, bool stdout = true, bool resultcollect = true) \n\
 {\n\
-    std::string cmd_ (cmd.data());\n\
-    size_t offset = cmd_.find(\" \");\n\
-    if (offset !=std::string::npos) {\n\
-        if (quoteparams)\n\
-            cmd_ = cmd_.substr(0, offset) + \" \\\"\" + cmd_.substr(offset + 1, std::string::npos) + \"\\\"\";\n\
-    }\n\
+    size_t offset = cmd.find(\" \");\n\
     std::vector<char *> toks;\n\
     wordexp_t p;\n\
     char **w;\n\
     int ret;\n\
         \n\
-    ret = wordexp(cmd_.c_str(), &p, 0);\n\
-    if (ret)\n\
+    ret = wordexp(cmd.data(), &p, 0);\n\
+    if (ret) {\n\
+        printf(\"%s:%d\\n\", __func__, __LINE__);\n\
         exit(-1);\n\
+     };\n\
     w = p.we_wordv;\n\
     for (int i = 0; i < p.we_wordc; i++) {\n\
         toks.emplace_back(w[i]);\n\
@@ -2859,7 +2854,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             int exitstatus; \n\
             std::string result;\n\
             if (!cmd.empty()) {\n\
-                execcommand(cmd, exitstatus, result, true, false, false);\n\
+                execcommand(cmd, exitstatus, result, true, false);\n\
             } else {\n\
                 exitstatus = mystoi(get_env(\"?\"), 0);\n\
             }\n\
@@ -2881,10 +2876,10 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             return exitstatus == 0; \n\
         }\n\
         \n\
-        const std::string exec(const std::string_view &cmd, bool quoteparams = false, bool  collectresults = true) {\n\
+        const std::string exec(const std::string_view &cmd, bool  collectresults = true) {\n\
             int exitstatus; \n\
             std::string result;\n\
-            execcommand(cmd, exitstatus, result, true, quoteparams, collectresults);\n\
+            execcommand(cmd, exitstatus, result, true, collectresults);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
         }\n\
@@ -2892,7 +2887,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         const std::string execnoout(const std::string_view &cmd, bool collectresults = true) {\n\
             int exitstatus; \n\
             std::string result; \n\
-            execcommand(cmd, exitstatus, result, false, false,  collectresults);\n\
+            execcommand(cmd, exitstatus, result, false, collectresults);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
         }\n"
