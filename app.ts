@@ -2842,7 +2842,6 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
 \n\
 void execcommand(const std::string_view &cmd, int & exitstatus, std::string &result, bool stdout = true, bool resultcollect = true) \n\
 {\n\
-    size_t offset = cmd.find(\" \");\n\
     std::vector<char *> toks;\n\
     wordexp_t p;\n\
     char **w;\n\
@@ -3398,8 +3397,6 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         "}\n"
         let sourcefunc = "void source(const std::string &fname)\n" +
         "{\n"  +
-            "std::vector<std::string> envs;\n" +
-            "std::string delimiter(\"\\n\");\n" +
             "int exitstatus;\n" +
             "std::string result;\n" +
             "std::string cmd = \"bash -c 'set -a && source \" + fname + \" && set +a && env'\";\n" +
