@@ -3400,7 +3400,12 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             "int exitstatus;\n" +
             "std::string result;\n" +
             "std::string cmd = \"bash -c 'set -a && source \" + fname + \" && set +a && env'\";\n" +
-            "execcommand(cmd, exitstatus, result, false);\n" +
+            "std::vector<char *> toks;\n" +
+            "toks.emplace_back((char*)\"bash\");\n" +
+            "toks.emplace_back((char*)\"-c\");\n" +
+            "toks.emplace_back(cmd.data());\n" +
+            "toks.emplace_back((char*)NULL);\n" +
+            "exitstatus = createChild(toks, result, false, true); \n" +
             "splitenvs(result);\n" +
         "}\n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
