@@ -2856,7 +2856,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             if (!cmd.empty()) {\n\
                 execcommand(cmd, exitstatus, result, true, false);\n\
             } else {\n\
-                exitstatus = mystoi(get_env(\"?\"), 0);\n\
+                exitstatus = mystoiz(get_env(\"?\"));\n\
             }\n\
             return exitstatus == 0; \n\
         }\n\
@@ -2867,12 +2867,12 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                 if (cmd == \"0\") return true;\n\
                 if (cmd == \"1\") return false;\n\
             }\n\
-            exitstatus = mystoi(get_env(\"?\"), 0);\n\
+            exitstatus = mystoiz(get_env(\"?\"));\n\
             return exitstatus == 0; \n\
         }\n\
         const int checkexitcode(const std::string &cmd) { \n\
             int exitstatus; \n\
-            exitstatus = mystoi(get_env(\"?\"), 0);\n\
+            exitstatus = mystoiz(get_env(\"?\"));\n\
             return exitstatus == 0; \n\
         }\n\
         \n\
@@ -3206,23 +3206,23 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
 
         const incrementstr = "\n\
         const std::string pre_increment(const std::string_view &variable) {\n\
-            int val = mystoi(get_env(variable), 0) + 1;\n\
+            int val = mystoiz(get_env(variable)) + 1;\n\
             set_env(variable, val);\n\
             return std::to_string(val);\n\
         }\n\
         const std::string post_increment(const std::string_view &variable) {\n\
-            int initval = mystoi(get_env(variable), 0);\n\
+            int initval = mystoiz(get_env(variable));\n\
             int val = initval + 1;\n\
             set_env(variable, val);\n\
             return std::to_string(initval);\n\
         }\n\
         const std::string pre_decrement(const std::string_view &variable) {\n\
-            int val = mystoi(get_env(variable), 0) - 1;\n\
+            int val = mystoiz(get_env(variable)) - 1;\n\
             set_env(variable, val);\n\
             return std::to_string(val);\n\
         }\n\
         const std::string post_decrement(const std::string_view &variable) {\n\
-            int initval = mystoi(get_env(variable), 0);\n\
+            int initval = mystoiz(get_env(variable));\n\
             int val = initval - 1;\n\
             set_env(variable, val);\n\
             return std::to_string(initval);\n\
