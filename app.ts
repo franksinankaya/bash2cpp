@@ -2775,10 +2775,12 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
     nChild = fork();\n\
     if (0 == nChild) {\n\
         if (dup2(aStdoutPipe[PIPE_WRITE], STDOUT_FILENO) == -1) {\n\
+            printf(\"%s:%d\\n\", __func__, __LINE__);\n\
             exit(errno);\n\
         }\n\
 \n\
         if (dup2(aStdoutPipe[PIPE_WRITE], STDERR_FILENO) == -1) {\n\
+            printf(\"%s:%d\\n\", __func__, __LINE__);\n\
             exit(errno);\n\
         }\n\
 \n\
