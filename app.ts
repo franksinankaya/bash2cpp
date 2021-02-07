@@ -3053,7 +3053,6 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             if (isregexstring(str)) {\n\
                 std::vector <std::string> files = globvector(str);\n\
                 for (const auto &entry : files){\n\
-                    std::cout << entry << std::endl;\n\
                     list.emplace_back(entry);\n\
                 };\n\
                 return;\n\
