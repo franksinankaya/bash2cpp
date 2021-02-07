@@ -2873,7 +2873,6 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         }\n\
         const int checkbuiltinexec(const std::string_view &cmd) { \n\
             int exitstatus; \n\
-            std::string result;\n\
             if (!cmd.empty()) {\n\
                 if (cmd == \"0\") return true;\n\
                 if (cmd == \"1\") return false;\n\
@@ -3040,20 +3039,14 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         std::vector <std::string> regexsplit(const std::string_view &str)\n\
         {\n\
             if (isregexstring(str)) {\n\
-                std::vector <std::string> files = globvector(str);\n\
-                for (const auto &entry : files)\n\
-                    std::cout << entry << std::endl;\n\
-                return files;\n\
+                return globvector(str);\n\
             }\n\
             return split(str);\n\
         }\n\
         void regexsplit(std::vector <std::string> &list, const std::string_view &str)\n\
         {\n\
             if (isregexstring(str)) {\n\
-                std::vector <std::string> files = globvector(str);\n\
-                for (const auto &entry : files){\n\
-                    list.emplace_back(entry);\n\
-                };\n\
+                globvector(list, str);\n\
                 return;\n\
             }\n\
             split(list, str);\n\
@@ -3103,7 +3096,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             }\n\
         }\n\
         \n\
-        std::string ifscombine(const std::vector<std::string> vec)\n\
+        std::string ifscombine(const std::vector<std::string> &vec)\n\
         {\n\
             const std::string separator = get_env(\"IFS\");\n\
             std::string str = \"\";\n\
@@ -3138,8 +3131,8 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             }\n\
             std::vector <std::string> tokens;\n\
             std::vector <std::string> keys;\n\
-            keys = split(var);\n\
-            tokens = split(line);\n\
+            split(keys, var);\n\
+            split(tokens, line);\n\
             if (tokens.size()) {\n\
                 int i = 0;\n\
                 for (int j = 0; j < tokens.size(); j++) {\n\
@@ -3149,13 +3142,12 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                     i++;\n\
                 }\n\
                 if (tokens.size() > keys.size()) {\n\
-                    std::vector<std::string>::const_iterator first = tokens.begin() + keys.size() - 1;\n\
-                    std::vector<std::string>::const_iterator last = tokens.begin() + tokens.size();\n\
-                    std::vector<std::string> remaining(first, last);\n\
+                    int first = keys.size() - 1;\n\
+                    int last = tokens.size();\n\
                     std::string s;\n\
-                    for (int count = 0; count < remaining.size(); count++) {\n\
-                        s += remaining[count];\n\
-                        if (count != (remaining.size() - 1))\n\
+                    for (int count = first; count < last; count++) {\n\
+                        s += tokens[count];\n\
+                        if (count != (tokens.size() - 1))\n\
                             s +=  \" \";\n\
                     }\n\
                     set_env(keys.back().c_str(), s.c_str());\n\
