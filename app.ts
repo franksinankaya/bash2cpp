@@ -2857,6 +2857,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         exit(-1);\n\
      };\n\
     w = p.we_wordv;\n\
+    toks.reserve(p.we_wordc);\n\
     for (int i = 0; i < p.we_wordc; i++) {\n\
         toks.emplace_back(w[i]);\n\
     }\n\
@@ -2923,16 +2924,13 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             if (str.front() == '\\\'') prev++;\n\
                                                 \n\
             while ((pos = str.find_first_of(delimiter, prev)) != std::string::npos) {\n\
-                if (pos > prev)\n\
-                {\n\
-                    std::string v = str.substr(prev, pos-prev);\n\
-                    size_t offset = v.find(\"=\");\n\
-                    if (offset != std::string::npos) {;\n\
-                        std::string key = v.substr(0, offset);\n\
-                        std::string value = v.substr(offset + 1);\n\
-                        if ((key != \"#\") && (value != \"\")) \n\
-                            set_env(key, value);\n\
-                    }\n\
+                std::string v = str.substr(prev, pos-prev);\n\
+                size_t offset = v.find(\"=\");\n\
+                if (offset != std::string::npos) {;\n\
+                    std::string key = v.substr(0, offset);\n\
+                    std::string value = v.substr(offset + 1);\n\
+                    if ((key != \"#\") && (value != \"\")) \n\
+                        set_env(key, value);\n\
                 }\n\
                 prev = pos+1;\n\
             }\n\
@@ -3032,6 +3030,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             glob_t glob_result;\n\
             glob(pattern.data(), GLOB_TILDE, NULL,& glob_result);\n\
             std::vector <std::string> files;\n\
+            files.reserve(glob_result.gl_pathc);\n\
             for (unsigned int i = 0; i < glob_result.gl_pathc; ++i) {\n\
                 files.emplace_back(std::string(glob_result.gl_pathv[i]));\n\
             }\n\
@@ -3041,6 +3040,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         void globvector(std::vector<std::string> &elems, const std::string_view& pattern){\n\
             glob_t glob_result;\n\
             glob(pattern.data(), GLOB_TILDE, NULL,& glob_result);\n\
+            elems.reserve(glob_result.gl_pathc);\n\
             for (unsigned int i = 0; i < glob_result.gl_pathc; ++i) {\n\
                 elems.emplace_back(std::string(glob_result.gl_pathv[i]));\n\
             }\n\
@@ -3197,6 +3197,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         text += "}\n"
         text += "void saveargs(std::vector<std::string> &list, int maxargs)\n"
         text += "{\n"
+        text += "    list.reserve(maxargs);\n"
         text += "    for (int i = 0; i < maxargs; i++) {\n"
         text += "        list.emplace_back(get_env(std::to_string(i + 1).c_str()));\n"
         text += "    }\n"
@@ -3409,6 +3410,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             "std::string result;\n" +
             "std::string cmd = \"bash -c 'set -a && source \" + fname + \" && set +a && env'\";\n" +
             "std::vector<char *> toks;\n" +
+            "toks.reserve(4);\n" +
             "toks.emplace_back((char*)\"bash\");\n" +
             "toks.emplace_back((char*)\"-c\");\n" +
             "toks.emplace_back(cmd.data());\n" +
