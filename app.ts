@@ -3082,10 +3082,11 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             {\n\
                 size_t initial_pos = startoffset;\n\
                 size_t start_pos = startoffset;\n\
+                int spacelen = std::string(\"  \").length();\n\
                 while ((start_pos = str.find(\"  \", start_pos)) != std::string::npos) {\n\
                     std::cout << str.substr(initial_pos, start_pos - initial_pos); \n\
                     std::cout << \" \"; \n\
-                    start_pos += std::string(\"  \").length(); \n\
+                    start_pos += spacelen; \n\
                     initial_pos = start_pos; \n\
                 }\n\
                 if (endoffset != std::string::npos)\n\
