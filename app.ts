@@ -3084,8 +3084,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                 size_t start_pos = startoffset;\n\
                 int spacelen = std::string(\"  \").length();\n\
                 while ((start_pos = str.find(\"  \", start_pos)) != std::string::npos) {\n\
-                    std::cout << str.substr(initial_pos, start_pos - initial_pos); \n\
-                    std::cout << \" \"; \n\
+                    std::cout << str.substr(initial_pos, start_pos - initial_pos) << \" \"; \n\
                     start_pos += spacelen; \n\
                     initial_pos = start_pos; \n\
                 }\n\
@@ -3211,7 +3210,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         text += "    for (auto elem : list )\n"
         text += "    {\n"
         text += "        set_env(std::to_string(i + 1).c_str(), elem.c_str());\n"
-        text += "        combinedargs += std::string(elem.c_str());\n"
+        text += "        combinedargs += elem;\n"
         text += "        if (i != (listsize - 1)) combinedargs += \" \";\n"
         text += "        i++;\n"
         text += "    }\n"
@@ -3455,7 +3454,7 @@ try {
     argstr += "setenv(\"0\", argv[0], 0);\n"
     argstr += "for (int i = 1; i < argc; i++) {\n"
     argstr += "setenv(std::to_string(i).c_str(), argv[i], 0);\n"
-    argstr += "combinedargs += std::string(argv[i]);\n"
+    argstr += "combinedargs += argv[i];\n"
     argstr += "if (i != (argc - 1)) combinedargs += \" \";\n"
     argstr += "}\n"
     argstr += "if (combinedargs.length() == 0) combinedargs = \" \";\n"
