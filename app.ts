@@ -3144,6 +3144,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             std::vector <std::string> tokens;\n\
             std::vector <std::string> keys;\n\
             split(keys, var);\n\
+            tokens.reserve(keys.size());\n\
             split(tokens, line);\n\
             int tokensize = tokens.size();\n\
             int keysize = keys.size();\n\
