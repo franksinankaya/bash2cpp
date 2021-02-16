@@ -2735,7 +2735,8 @@ class ConvertBash {
         \n\
         const std::string_view set_env(const std::string_view &cmd, const float value) { \n\
             setenv(cmd.data(), std::to_string(value).c_str(), 1);\n\
-            return \"\";\n\        }\n\
+            return \"\";\n\
+        }\n\
         \n\
         const std::string_view set_env(const std::string_view &cmd, const int value) { \n\
             setenv(cmd.data(), std::to_string(value).c_str(), 1);\n\
@@ -2945,7 +2946,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                     std::string key = v.substr(0, offset);\n\
                     std::string value = v.substr(offset + 1);\n\
                     if ((key != \"#\") && (value != \"\")) \n\
-                        set_env(key, value);\n\
+                        setenv(key.c_str(), value.c_str(), 1);\n\
                 }\n\
                 prev = pos+1;\n\
             }\n\
@@ -2958,7 +2959,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                     std::string key = v.substr(0, offset);\n\
                     std::string value = v.substr(offset + 1);\n\
                     if ((key != \"#\") && (value != \"\")) \n\
-                        set_env(key, value);\n\
+                        setenv(key.c_str(), value.c_str(), 1);\n\
                 }\n\
             }\n\
         }\n\
@@ -3168,7 +3169,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                 for (int j = 0; j < tokensize; j++) {\n\
                     if (i == keysize)\n\
                         break;\n\
-                    set_env(keys[i].c_str(), tokens[j].c_str());\n\
+                    setenv(keys[i].c_str(), tokens[j].c_str(), 1);\n\
                     i++;\n\
                 }\n\
                 if (tokensize > keysize) {\n\
@@ -3181,7 +3182,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
                         if (count != (tokensize - 1))\n\
                             s +=  \" \";\n\
                     }\n\
-                    set_env(keys.back().c_str(), s.c_str());\n\
+                    setenv(keys.back().c_str(), s.c_str(), 1);\n\
                 }\n\
             } else {\n\
                 if (keysize)\n\
@@ -3200,7 +3201,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         const cdstr = "\n\
         void cd(const std::string_view &directory) {\n\
             std::filesystem::current_path(directory);\n\
-            set_env(\"PWD\", std::filesystem::current_path());\n\
+            setenv(\"PWD\", std::filesystem::current_path().c_str(), 1);\n\
             set_env(\"?\", 0);\n\
         }\n"
 
@@ -3208,7 +3209,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         text += "void restoreargs(std::vector<std::string> &list, int maxargs)\n"
         text += "{\n"
         text += "    for (int i = 0; i < maxargs; i++) {\n"
-        text += "        set_env(std::to_string(i + 1).c_str(), list[i]);\n"
+        text += "        setenv(std::to_string(i + 1).c_str(), list[i].c_str(), 1);\n"
         text += "    }\n"
         text += "}\n"
         text += "void saveargs(std::vector<std::string> &list, int maxargs)\n"
@@ -3226,13 +3227,13 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         text += "    set_env(\"#\", listsize);\n"
         text += "    for (auto elem : list )\n"
         text += "    {\n"
-        text += "        set_env(std::to_string(i + 1).c_str(), elem.c_str());\n"
+        text += "        setenv(std::to_string(i + 1).c_str(), elem.c_str(), 1);\n"
         text += "        combinedargs += elem;\n"
         text += "        if (i != (listsize - 1)) combinedargs += \" \";\n"
         text += "        i++;\n"
         text += "    }\n"
         text += "    for (int i = listsize + 1; i < (maxargs + 1); i++) {\n"
-        text += "        set_env(std::to_string(i).c_str(), \" \");\n"
+        text += "        setenv(std::to_string(i).c_str(), \" \", 1);\n"
         text += "    }\n"
         text += "    if (combinedargs.length() == 0) combinedargs = \" \";\n"
         text += "        set_env(\"@\", combinedargs);\n"
@@ -3386,7 +3387,7 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             "        m_env = env;\n" +
             "        m_backup = get_env(env);\n" + 
             "    }\n" +
-            "    ~scopedvariable(){set_env(m_env.c_str(), m_backup);}\n" +
+            "    ~scopedvariable(){setenv(m_env.c_str(), m_backup.c_str(), 1);}\n" +
             "};\n\
         template <typename F>\n\
         std::string execinternal(F f)\n\
@@ -3466,19 +3467,19 @@ try {
     maxargs = converter.maxReferredArgs(ast, maxargs)
 
     let argstr = "void convertMainArgs(int argc, const char *argv[], int maxargs){\n"
-    argstr += "if (argc > 1) setenv(\"#\", std::to_string(argc - 1).c_str(), 0);\n"
-    argstr += "else  setenv(\"#\", \"0\", 0);\n"
+    argstr += "if (argc > 1) setenv(\"#\", std::to_string(argc - 1).c_str(), 1);\n"
+    argstr += "else  setenv(\"#\", \"0\", 1);\n"
     argstr += "std::string combinedargs;\n"
-    argstr += "setenv(\"0\", argv[0], 0);\n"
+    argstr += "setenv(\"0\", argv[0], 1);\n"
     argstr += "for (int i = 1; i < argc; i++) {\n"
-    argstr += "setenv(std::to_string(i).c_str(), argv[i], 0);\n"
+    argstr += "setenv(std::to_string(i).c_str(), argv[i], 1);\n"
     argstr += "combinedargs += argv[i];\n"
     argstr += "if (i != (argc - 1)) combinedargs += \" \";\n"
     argstr += "}\n"
     argstr += "if (combinedargs.length() == 0) combinedargs = \" \";\n"
-    argstr += "setenv(\"@\", combinedargs.c_str(), 0);\n"
+    argstr += "setenv(\"@\", combinedargs.c_str(), 1);\n"
     argstr += "for (int i = argc; i < (maxargs + 1); i++) {\n"
-    argstr += "setenv(std::to_string(i).c_str(), \" \", 0);\n"
+    argstr += "setenv(std::to_string(i).c_str(), \" \", 1);\n"
     argstr += "}\n"
     argstr += "}\n"
 
