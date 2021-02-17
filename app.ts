@@ -2800,8 +2800,8 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
         close(aStdoutPipe[PIPE_WRITE]);\n\
 \n\
         size_t available = 0;\n\
-        const int bufsize = 512;\n\
-        char databuf[bufsize + 1];\n\
+        const int bufsize = 4096;\n\
+        static char databuf[bufsize + 1];\n\
         databuf[bufsize] = 0;\n\
         while (read(aStdoutPipe[PIPE_READ], &nChar, 1) == 1) {\n\
             if (stdout)\n\
