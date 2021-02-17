@@ -2883,8 +2883,8 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         \n\
         const int checkexec(const std::string_view &cmd) { \n\
             int exitstatus; \n\
-            std::string result;\n\
             if (!cmd.empty()) {\n\
+                std::string result;\n\
                 execcommand(cmd, exitstatus, result, true, false);\n\
             } else {\n\
                 exitstatus = mystoiz(get_env(\"?\"));\n\
