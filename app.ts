@@ -2810,12 +2810,27 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
             \n\
             ioctl(aStdoutPipe[PIPE_READ], FIONREAD, &available);\n\
             if (available && resultcollect) result.reserve(available + 2);\n\
-            while (available / bufsize) {\n\
-                read(aStdoutPipe[PIPE_READ], &databuf[0], bufsize);\n\
-                if (stdout)\n\
+            if (resultcollect && !stdout) {\n\
+                while (available / bufsize) {\n\
+                    read(aStdoutPipe[PIPE_READ], &databuf[0], bufsize);\n\
+                    result += databuf;\n\
+                    available -= bufsize;\n\
+                }\n\
+            }\n\
+            else if (resultcollect && stdout) {\n\
+                while (available / bufsize) {\n\
+                    read(aStdoutPipe[PIPE_READ], &databuf[0], bufsize);\n\
+                    result += databuf;\n\
                     std::cout << databuf;\n\
-                if (resultcollect) result += databuf;\n\
-                available -= bufsize;\n\
+                    available -= bufsize;\n\
+                }\n\
+            }\n\
+            else if (!resultcollect && stdout) {\n\
+                while (available / bufsize) {\n\
+                    read(aStdoutPipe[PIPE_READ], &databuf[0], bufsize);\n\
+                    std::cout << databuf;\n\
+                    available -= bufsize;\n\
+                }\n\
             }\n\
             if (available % bufsize) {\n\
                 read(aStdoutPipe[PIPE_READ], &databuf[0], available % bufsize);\n\
