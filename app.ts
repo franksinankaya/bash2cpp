@@ -2760,7 +2760,7 @@ class ConvertBash {
         }\n"
 
         const execCommand = "\n\
-int createChild(std::vector<char *> &aArguments, std::string &result, bool stdout, bool resultcollect) {\n\
+int createChild(int *outfd, std::vector<char *> &aArguments) {\n\
     int aStdinPipe[2];\n\
     int aStdoutPipe[2];\n\
     int nChild;\n\
@@ -2778,12 +2778,13 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
 \n\
     nChild = fork();\n\
     if (0 == nChild) {\n\
-        if (dup2(aStdoutPipe[PIPE_WRITE], STDOUT_FILENO) == -1) {\n\
+        close(outfd[0]);\n\
+        if (dup2(outfd[1], STDOUT_FILENO) == -1) {\n\
             printf(\"%s:%d\\n\", __func__, __LINE__);\n\
             exit(errno);\n\
         }\n\
 \n\
-        if (dup2(aStdoutPipe[PIPE_WRITE], STDERR_FILENO) == -1) {\n\
+        if (dup2(outfd[1], STDERR_FILENO) == -1) {\n\
             printf(\"%s:%d\\n\", __func__, __LINE__);\n\
             exit(errno);\n\
         }\n\
@@ -2797,51 +2798,9 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
 \n\
         exit(nResult);\n\
     } else if (nChild > 0) {\n\
+        close(outfd[1]);\n\
         close(aStdinPipe[PIPE_READ]);\n\
         close(aStdoutPipe[PIPE_WRITE]);\n\
-\n\
-        size_t available = 0;\n\
-        const int bufsize = 4096;\n\
-        static char databuf[bufsize + 1];\n\
-        databuf[bufsize] = 0;\n\
-        while (read(aStdoutPipe[PIPE_READ], &nChar, 1) == 1) {\n\
-            if (stdout)\n\
-                std::cout << nChar;\n\
-            if (resultcollect) result += nChar;\n\
-            \n\
-            ioctl(aStdoutPipe[PIPE_READ], FIONREAD, &available);\n\
-            if (available && resultcollect) result.reserve(available + 2);\n\
-            if (resultcollect && !stdout) {\n\
-                while (available / bufsize) {\n\
-                    read(aStdoutPipe[PIPE_READ], &databuf[0], bufsize);\n\
-                    result += databuf;\n\
-                    available -= bufsize;\n\
-                }\n\
-            }\n\
-            else if (resultcollect && stdout) {\n\
-                while (available / bufsize) {\n\
-                    read(aStdoutPipe[PIPE_READ], &databuf[0], bufsize);\n\
-                    result += databuf;\n\
-                    std::cout << databuf;\n\
-                    available -= bufsize;\n\
-                }\n\
-            }\n\
-            else if (!resultcollect && stdout) {\n\
-                while (available / bufsize) {\n\
-                    read(aStdoutPipe[PIPE_READ], &databuf[0], bufsize);\n\
-                    std::cout << databuf;\n\
-                    available -= bufsize;\n\
-                }\n\
-            }\n\
-            if (available % bufsize) {\n\
-                read(aStdoutPipe[PIPE_READ], &databuf[0], available % bufsize);\n\
-                databuf[available % bufsize] = 0;\n\
-                if (stdout)\n\
-                    std::cout << databuf;\n\
-                if (resultcollect) result += databuf;\n\
-            }\n\
-        }\n\
-\n\
         close(aStdinPipe[PIPE_WRITE]);\n\
         close(aStdoutPipe[PIPE_READ]);\n\
 \n\
@@ -2860,7 +2819,7 @@ int createChild(std::vector<char *> &aArguments, std::string &result, bool stdou
     return nChild;\n\
 }\n\
 \n\
-void execcommand(const std::string_view &cmd, int & exitstatus, std::string &result, bool stdout = true, bool resultcollect = true) \n\
+void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
 {\n\
     std::vector<char *> toks;\n\
     wordexp_t p;\n\
@@ -2878,15 +2837,64 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         toks.emplace_back(w[i]);\n\
     }\n\
     toks.push_back(NULL);\n\
-    exitstatus = createChild(toks, result, stdout, resultcollect);\n\
+    exitstatus = createChild(outfd, toks);\n\
     wordfree(&p);\n\
 }\n\
         \n\
+        const void writetoout(int *outfd, std::string &result, bool stdout, bool resultcollect) { \n\
+            char nChar;\n\
+            size_t available = 0;\n\
+            const int bufsize = 4096;\n\
+            char databuf[bufsize + 1];\n\
+            databuf[bufsize] = 0;\n\
+            while (read(outfd[0], &nChar, 1) == 1) {\n\
+                if (stdout)\n\
+                    std::cout << nChar;\n\
+                if (resultcollect) result += nChar;\n\
+                \n\
+                ioctl(outfd[0], FIONREAD, &available);\n\
+                if (available && resultcollect) result.reserve(available + 2);\n\
+                if (resultcollect && !stdout) {\n\
+                    while (available / bufsize) {\n\
+                        read(outfd[0], &databuf[0], bufsize);\n\
+                        result += databuf;\n\
+                        available -= bufsize;\n\
+                    }\n\
+                }\n\
+                else if (resultcollect && stdout) {\n\
+                    while (available / bufsize) {\n\
+                        read(outfd[0], &databuf[0], bufsize);\n\
+                        result += databuf;\n\
+                        std::cout << databuf;\n\
+                        available -= bufsize;\n\
+                    }\n\
+                }\n\
+                else if (!resultcollect && stdout) {\n\
+                    while (available / bufsize) {\n\
+                        read(outfd[0], &databuf[0], bufsize);\n\
+                        std::cout << databuf;\n\
+                        available -= bufsize;\n\
+                    }\n\
+                }\n\
+                if (available % bufsize) {\n\
+                    read(outfd[0], &databuf[0], available % bufsize);\n\
+                    databuf[available % bufsize] = 0;\n\
+                    if (stdout)\n\
+                        std::cout << databuf;\n\
+                    if (resultcollect) result += databuf;\n\
+                }\n\
+            }\n\
+            close(outfd[0]); \n\
+        } \n\
         const int checkexec(const std::string_view &cmd) { \n\
             int exitstatus; \n\
             if (!cmd.empty()) {\n\
                 std::string result;\n\
-                execcommand(cmd, exitstatus, result, true, false);\n\
+                int outfd[2];\n\
+                pipe(outfd);\n\
+                bool stdout = true;\n bool resultcollect = false;\n\
+                execcommand(outfd, cmd, exitstatus);\n\
+                writetoout(outfd, result, stdout, resultcollect);\n\
             } else {\n\
                 exitstatus = mystoiz(get_env(\"?\"));\n\
             }\n\
@@ -2907,10 +2915,14 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             return exitstatus == 0; \n\
         }\n\
         \n\
-        const std::string exec(const std::string_view &cmd, bool  collectresults = true) {\n\
+        const std::string exec(const std::string_view &cmd, bool  resultcollect = true) {\n\
             int exitstatus; \n\
             std::string result;\n\
-            execcommand(cmd, exitstatus, result, true, collectresults);\n\
+            char nChar;\n\
+            int outfd[2];\n\
+            pipe(outfd);\n\
+            execcommand(outfd, cmd, exitstatus);\n\
+            writetoout(outfd, result, stdout, resultcollect);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
         }\n\
@@ -2918,14 +2930,24 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
         const void execnoresult(const std::string_view &cmd) {\n\
             int exitstatus; \n\
             std::string result;\n\
-            execcommand(cmd, exitstatus, result, true, false);\n\
+            char nChar;\n\
+            int outfd[2];\n\
+            pipe(outfd);\n\
+            bool stdout = true;\n bool resultcollect = false;\n\
+            execcommand(outfd, cmd, exitstatus);\n\
+            writetoout(outfd, result, stdout, resultcollect);\n\
             set_env(\"?\", exitstatus);\n\
         }\n\
         \n\
-        const std::string execnoout(const std::string_view &cmd, bool collectresults = true) {\n\
+        const std::string execnoout(const std::string_view &cmd, bool resultcollect = true) {\n\
             int exitstatus; \n\
             std::string result; \n\
-            execcommand(cmd, exitstatus, result, false, collectresults);\n\
+            char nChar;\n\
+            int outfd[2];\n\
+            pipe(outfd);\n\
+            bool stdout = false;\n\
+            execcommand(outfd, cmd, exitstatus);\n\
+            writetoout(outfd, result, stdout, resultcollect);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
         }\n"
@@ -3432,7 +3454,12 @@ void execcommand(const std::string_view &cmd, int & exitstatus, std::string &res
             "toks.emplace_back((char*)\"-c\");\n" +
             "toks.emplace_back(cmd.data());\n" +
             "toks.emplace_back((char*)NULL);\n" +
-            "exitstatus = createChild(toks, result, false, true); \n" +
+            "char nChar;\n" +
+            "int outfd[2];\n" +
+            "pipe(outfd);\n" +
+            "bool stdout = false;\n bool resultcollect = true;\n" +
+            "exitstatus = createChild(outfd, toks); \n" +
+            "writetoout(outfd, result, stdout, resultcollect);\n" +
             "splitenvs(result);\n" +
         "}\n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
