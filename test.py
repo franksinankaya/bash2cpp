@@ -4,6 +4,8 @@ import os
 import time
 import subprocess
 
+repeat=0
+
 def execcommand(cmd):
 	list_files = subprocess.run(cmd, stdout=subprocess.PIPE)
 	return list_files.stdout.decode('utf-8'), list_files.returncode, list_files.stderr
@@ -202,10 +204,7 @@ def buildtest(testname=''):
             sys.exit(result)
         print("%-30s" % (f))
 
-def buildandexectest(testname=''):
-    for i in buildandexec:
-        if testname!='' and i!=testname:
-            continue
+def buildandexectestone(i):
         f=os.path.splitext(i)[0]
         cmd0="node app.js tests/" + i.split()[0] + " gen/" + f + ".cpp gen/" + f + ".log"
         list=convertlist(cmd0)
@@ -256,13 +255,30 @@ def buildandexectest(testname=''):
             text_file.close()
             print("{} failed".format(l))
             sys.exit(1)
+        return (l, elapsed_time0, elapsed_time1, ((elapsed_time1 - elapsed_time0) * 100) / elapsed_time1)
 
+def buildandexectest(repeat, testname=''):
+    for i in buildandexec:
+        if testname!='' and i!=testname:
+            continue
+        if repeat:
+            while repeat:
+                buildandexectestone(i)
+        else:
+            buildandexectestone(i)
 
 opt="-O3"
-
+runmeasuretest=0
+runbuildtest=0
 for a in sys.argv:
 	if a == "-O0":
 		opt="-g -O0"
+	if a == "-n":
+		repeat=1
+	if a == "-e":
+		runmeasuretest=1
+	if a == "-b":
+		runbuildtest=1
 	if a == "-h":
 		print("test.py -e to run build and exec tests only")
 		print("test.py -b to run build tests only")
@@ -271,24 +287,24 @@ for a in sys.argv:
 		sys.exit(0)
 
 if len(sys.argv) == 2:
-	if sys.argv[1] == "-b":
+	if runbuildtest:
 		buildtest()
 		sys.exit()
 
 if len(sys.argv) > 2:
-	if sys.argv[1] == "-b":
+	if runbuildtest:
 		buildtest(sys.argv[len(sys.argv) - 1])
 		sys.exit()
 
 if len(sys.argv) == 2:
-	if sys.argv[1] == "-e":
-		buildandexectest()
+	if runmeasuretest:
+		buildandexectest(repeat)
 		sys.exit()
 
 if len(sys.argv) > 2:
-	if sys.argv[1] == "-e":
-		buildandexectest(sys.argv[len(sys.argv) - 1])
+	if runmeasuretest:
+		buildandexectest(repeat, sys.argv[len(sys.argv) - 1])
 		sys.exit()
 
 buildtest()
-buildandexectest()
+buildandexectest(repeat)
