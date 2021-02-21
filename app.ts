@@ -3449,12 +3449,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             "int exitstatus;\n" +
             "std::string result;\n" +
             "std::string cmd = \"bash -c 'set -a && source \" + fname + \" && set +a && env'\";\n" +
-            "std::vector<char *> toks;\n" +
-            "toks.reserve(4);\n" +
-            "toks.emplace_back((char*)\"bash\");\n" +
-            "toks.emplace_back((char*)\"-c\");\n" +
-            "toks.emplace_back(cmd.data());\n" +
-            "toks.emplace_back((char*)NULL);\n" +
+            "std::vector<char *> toks{(char*)\"bash\", (char*)\"-c\", cmd.data(), (char*)NULL};\n" +
             "char nChar;\n" +
             "int outfd[2];\n" +
             "pipe(outfd);\n" +
