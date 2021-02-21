@@ -198,7 +198,7 @@ def buildtest(testname=''):
             print(out)
             print(err)
             sys.exit(result)
-        cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -fno-exceptions -lpcre -lpthread -std=c++17"
+        cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -fno-exceptions -lpcre -lpthread -std=c++17 -g"
         if profile:
             cmd1 += " -pg"
         list=convertlist(cmd1)
@@ -214,7 +214,7 @@ def buildandexectestone(i):
         out, result, err = execcommand(list)
         if result!=0:
             sys.exit(result)
-        cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -fno-exceptions -flto -lpcre -lpthread -std=c++17"
+        cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -fno-exceptions -flto -lpcre -lpthread -std=c++17 -g"
         if profile:
             cmd1 += " -pg"
         list=convertlist(cmd1)
