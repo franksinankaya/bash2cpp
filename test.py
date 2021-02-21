@@ -3,9 +3,51 @@ import sys
 import os
 import time
 import subprocess
+import argparse
+
+def get_params():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-e", "--exectests", action='store_true', 
+                        help="run build and exec tests only")
+    parser.add_argument("-b", "--buildtests", action='store_true',
+                        help="run build tests only")
+    parser.add_argument("-O0", "--reduceoptimization", action='store_true',
+                        help="reduce optimization level")
+    parser.add_argument("-p", "--enableprofiling", action='store_true',
+                        help="enable profiling")
+    parser.add_argument("-n", '--repeattests', type=int,
+                        help='repeat test')
+    parser.add_argument('vars', nargs='*')
+    params, unknown = parser.parse_known_args()
+    return params, unknown 
+
+params, unknown = get_params()
+vars = params.vars
+if unknown is not None:
+    for u in unknown:
+        vars.append(u)
 
 repeat=0
 profile=0
+runmeasuretestonly=0
+runbuildtestonly=0
+opt="-O3"
+
+if params.repeattests:
+    repeat=params.repeattests
+
+if params.enableprofiling:
+    profile=params.enableprofiling
+
+if params.reduceoptimization:
+    opt="-O0"
+
+if params.exectests:
+    runmeasuretestonly=params.exectests
+
+if params.buildtests:
+    runbuildtestonly=params.buildtests
+
 
 def execcommand(cmd):
 	list_files = subprocess.run(cmd, stdout=subprocess.PIPE)
@@ -188,7 +230,7 @@ def convertlist(cmd):
 
 def buildtest(testname=''):
     for i in buildonly:
-        if testname!='' and i!=testname:
+        if testname and testname[0]!='' and i!=testname[0]:
             continue
         f=os.path.splitext(i)[0]
         cmd0="node app.js tests/" + i.split()[0] + " gen/" + f + ".cpp gen/" + f + ".log"
@@ -264,56 +306,32 @@ def buildandexectestone(i):
 
 def buildandexectest(repeat, testname=''):
     for i in buildandexec:
-        if testname!='' and i!=testname:
+        if testname and testname[0]!='' and i!=testname[0]:
             continue
         if repeat:
-            while repeat:
-                buildandexectestone(i)
+            average0=0
+            average1=0
+            average2=0
+            r=repeat
+            name=""
+            while r > 0:
+                [name, elapsed_time0, elapsed_time1, delta,] = buildandexectestone(i)
+                average0 = average0 + elapsed_time0
+                average1 = average1 + elapsed_time1
+                average2 = average2 + delta
+                r=r-1
+            print("==============================================================================================================")
+            print("%-30s %-30s %-30s %-30s" % ("average:" + name, average0/repeat, average1/repeat, average2/repeat))
         else:
             buildandexectestone(i)
 
-opt="-O3"
-runmeasuretest=0
-runbuildtest=0
-for a in sys.argv:
-	if a == "-O0":
-		opt="-g -O0"
-	if a == "-n":
-		repeat=1
-	if a == "-p":
-		profile=1
-	if a == "-e":
-		runmeasuretest=1
-	if a == "-b":
-		runbuildtest=1
-	if a == "-h":
-		print("test.py -n run the same test continuously")
-		print("test.py -p enable profiling")
-		print("test.py -e to run build and exec tests only")
-		print("test.py -b to run build tests only")
-		print("test.py -O0 to reduce optimization level")
-		print("test.py -e -O0 for8.sh to run for8.sh with reduced optimization level")
-		sys.exit(0)
+if runbuildtestonly:
+	buildtest()
+	sys.exit()
 
-if len(sys.argv) == 2:
-	if runbuildtest:
-		buildtest()
-		sys.exit()
-
-if len(sys.argv) > 2:
-	if runbuildtest:
-		buildtest(sys.argv[len(sys.argv) - 1])
-		sys.exit()
-
-if len(sys.argv) == 2:
-	if runmeasuretest:
-		buildandexectest(repeat)
-		sys.exit()
-
-if len(sys.argv) > 2:
-	if runmeasuretest:
-		buildandexectest(repeat, sys.argv[len(sys.argv) - 1])
-		sys.exit()
+if runmeasuretestonly:
+	buildandexectest(repeat, vars)
+	sys.exit()
 
 buildtest()
-buildandexectest(repeat)
+buildandexectest(repeat, vars)
