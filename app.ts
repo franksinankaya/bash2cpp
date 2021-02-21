@@ -2859,14 +2859,14 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                 if (available && resultcollect) result.reserve(available + 2);\n\
                 if (resultcollect && !stdout) {\n\
                     while (available / bufsize) {\n\
-                        read(outfd[0], &databuf[0], bufsize);\n\
+                        if (read(outfd[0], &databuf[0], bufsize) < 0) break;;\n\
                         result += databuf;\n\
                         available -= bufsize;\n\
                     }\n\
                 }\n\
                 else if (resultcollect && stdout) {\n\
                     while (available / bufsize) {\n\
-                        read(outfd[0], &databuf[0], bufsize);\n\
+                        if (read(outfd[0], &databuf[0], bufsize) < 0) break;\n\
                         result += databuf;\n\
                         std::cout << databuf;\n\
                         available -= bufsize;\n\
@@ -2874,17 +2874,18 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                 }\n\
                 else if (!resultcollect && stdout) {\n\
                     while (available / bufsize) {\n\
-                        read(outfd[0], &databuf[0], bufsize);\n\
+                        if (read(outfd[0], &databuf[0], bufsize) < 0) break;\n\
                         std::cout << databuf;\n\
                         available -= bufsize;\n\
                     }\n\
                 }\n\
                 if (available % bufsize) {\n\
-                    read(outfd[0], &databuf[0], available % bufsize);\n\
+                    if (read(outfd[0], &databuf[0], available % bufsize) > 0) {\n\
                     databuf[available % bufsize] = 0;\n\
                     if (stdout)\n\
                         std::cout << databuf;\n\
                     if (resultcollect) result += databuf;\n\
+                    }\n\
                 }\n\
             }\n\
             close(outfd[0]); \n\
@@ -3362,7 +3363,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
 	}\n\
 \n\
 	void writecin(std::stringstream &str) {\n\
-		write(readfd[1], str.str().data(), str.str().length());\n\
+		if (write(readfd[1], str.str().data(), str.str().length()) < 0) exit(-1);\n\
 		close(readfd[1]);\n\
 	}\n\
 };\n\
