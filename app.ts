@@ -2623,8 +2623,9 @@ class ConvertBash {
     public getSupportDefinitions(): string {
         const fileexists = "\n\
         const int fileexists(const std::string_view &file) {\n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return std::filesystem::exists(file);        \n\
+                return (stat(file.data(), &buf) == 0);        \n\
         }\n\
         std::ifstream::pos_type filesize(const char* filename)\n\
         {\n\
@@ -2640,61 +2641,71 @@ class ConvertBash {
 
         const regularfileexists = "\n\
         const int regularfileexists(const std::string_view &file) {          \n\
-            return fileexists(file) && std::filesystem::is_regular_file(std::filesystem::status(file));        \n\
+            struct stat buf;                        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISREG(buf.st_mode);        \n\
         }\n"
 
         const pipefileexists = "\n\
         const int pipefileexists(const std::string_view &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_fifo(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && (buf.st_mode & S_IFIFO);        \n\
         }\n"
 
         const linkfileexists = "\n\
         const int linkfileexists(const std::string_view &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_symlink(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISLNK(buf.st_mode);        \n\
         }\n"
 
         const socketfileexists = "\n\
         const int socketfileexists(const std::string_view &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_socket(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISSOCK(buf.st_mode);        \n\
         }\n"
 
         const blockfileexists = "\n\
         const int blockfileexists(const std::string_view &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_block_file(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISBLK(buf.st_mode);        \n\
         }\n"
 
         const charfileexists = "\n\
         const int charfileexists(const std::string_view &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_character_file(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISCHR(buf.st_mode);        \n\
         }\n"
 
         const fileexecutable = "\n\
         const int fileexecutable(const std::string_view &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_exec)!= std::filesystem::perms::none);        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) &&  (buf.st_mode & S_IXUSR);        \n\
         }\n"
 
         const filewritable = "\n\
         const int filewritable(const std::string_view &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_write)!= std::filesystem::perms::none);        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) &&  (buf.st_mode & S_IWUSR);        \n\
         }\n"
 
         const filereadable = "\n\
         const int filereadable(const std::string_view &file) {          \n\
+            struct stat buf;                        \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && ((std::filesystem::status(file).permissions() & std::filesystem::perms::owner_read)!= std::filesystem::perms::none);        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) &&  (buf.st_mode & S_IRUSR);        \n\
         }\n"
 
         const direxists = "\n\
         const int direxists(const std::string_view &file) {                                   \n\
+            struct stat buf;                                                \n\
             if (file == \"\") return true; \n\
-            return fileexists(file) && std::filesystem::is_directory(std::filesystem::status(file));        \n\
+            return fileexists(file) && (stat(file.data(), &buf) == 0) && S_ISDIR(buf.st_mode);        \n\
         }\n"
 
         const envCommand = "\n\
@@ -3238,9 +3249,12 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         }\n"
 
         const cdstr = "\n\
-        void cd(const std::string_view &directory) {\n\
-            std::filesystem::current_path(directory);\n\
-            setenv(\"PWD\", std::filesystem::current_path().c_str(), 1);\n\
+        void cd(const std::string &directory) {\n\
+            std::vector<char> cwd;\n\
+            if (chdir(directory.data())) return;\n\
+            long size = pathconf(\".\", _PC_PATH_MAX);\n\
+            cwd.reserve(size);\n\
+            set_env(\"PWD\", getcwd(cwd.data(), (size_t)size));\n\
             set_env(\"?\", 0);\n\
         }\n"
 
@@ -3541,7 +3555,7 @@ try {
         "#include <iterator>\n" +
         "#include <glob.h>\n" +
         "#include <pcre.h>\n" +
-        "#include <filesystem>\n" +
+        "#include <sys/stat.h>\n" +
         "#include <sys/types.h>\n" +
         "#include <sys/wait.h>\n" +
         "#include <fcntl.h>\n" +
