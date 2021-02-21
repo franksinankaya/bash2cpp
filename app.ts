@@ -2769,12 +2769,14 @@ int createChild(int *outfd, std::vector<char *> &aArguments) {\n\
     int nResult;\n\
 \n\
     if (pipe(aStdinPipe) < 0) {\n\
-        return -1;\n\
+        printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+        exit(-1);\n\
     }\n\
     if (pipe(aStdoutPipe) < 0) {\n\
         close(aStdinPipe[PIPE_READ]);\n\
         close(aStdinPipe[PIPE_WRITE]);\n\
-        return -1;\n\
+        printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+        exit(-1);\n\
     }\n\
 \n\
     nChild = fork();\n\
@@ -2892,7 +2894,10 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             if (!cmd.empty()) {\n\
                 std::string result;\n\
                 int outfd[2];\n\
-                pipe(outfd);\n\
+                if (pipe(outfd) < 0) {\n\
+                    printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                    exit(-1);\n\
+                }\n\
                 bool stdout = true;\n bool resultcollect = false;\n\
                 execcommand(outfd, cmd, exitstatus);\n\
                 writetoout(outfd, result, stdout, resultcollect);\n\
@@ -2921,7 +2926,10 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             std::string result;\n\
             char nChar;\n\
             int outfd[2];\n\
-            pipe(outfd);\n\
+            if (pipe(outfd) < 0) {\n\
+                printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                exit(-1);\n\
+            }\n\
             execcommand(outfd, cmd, exitstatus);\n\
             writetoout(outfd, result, stdout, resultcollect);\n\
             set_env(\"?\", exitstatus);\n\
@@ -2933,7 +2941,10 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             std::string result;\n\
             char nChar;\n\
             int outfd[2];\n\
-            pipe(outfd);\n\
+            if (pipe(outfd) < 0) {\n\
+                printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                exit(-1);\n\
+            }\n\
             bool stdout = true;\n bool resultcollect = false;\n\
             execcommand(outfd, cmd, exitstatus);\n\
             writetoout(outfd, result, stdout, resultcollect);\n\
@@ -2945,7 +2956,10 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             std::string result; \n\
             char nChar;\n\
             int outfd[2];\n\
-            pipe(outfd);\n\
+            if (pipe(outfd) < 0) {\n\
+                printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                exit(-1);\n\
+            }\n\
             bool stdout = false;\n\
             execcommand(outfd, cmd, exitstatus);\n\
             writetoout(outfd, result, stdout, resultcollect);\n\
@@ -3326,7 +3340,10 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
 	}\n\
 	scopeexitcincout(bool stdout = false) {\n\
 		if (!stdout) std::cout.rdbuf(buffer.rdbuf());\n\
-		pipe(readfd);\n\
+        if (pipe(readfd) < 0) {\n\
+            printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+            exit(-1);\n\
+        }\n\
 		m_inbackup = dup(0);\n\
 		dup2(readfd[0], STDIN_FILENO); \n\
 		close(readfd[0]);\n\
@@ -3452,7 +3469,10 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             "std::vector<char *> toks{(char*)\"bash\", (char*)\"-c\", cmd.data(), (char*)NULL};\n" +
             "char nChar;\n" +
             "int outfd[2];\n" +
-            "pipe(outfd);\n" +
+            "if (pipe(outfd) < 0) {\n\
+                    printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                    exit(-1);\n\
+                }\n" +
             "bool stdout = false;\n bool resultcollect = true;\n" +
             "exitstatus = createChild(outfd, toks); \n" +
             "writetoout(outfd, result, stdout, resultcollect);\n" +
