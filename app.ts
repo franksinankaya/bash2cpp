@@ -2902,6 +2902,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                 bool stdout = true;\n bool resultcollect = false;\n\
                 execcommand(outfd, cmd, exitstatus);\n\
                 writetoout(outfd, result, stdout, resultcollect);\n\
+                set_env(\"?\", exitstatus);\n\
             } else {\n\
                 exitstatus = mystoiz(getenv(\"?\"));\n\
             }\n\
