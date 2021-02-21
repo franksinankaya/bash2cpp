@@ -33,7 +33,7 @@ class ConvertBash {
         }
         let val = ""
         if (asenv)
-            val = "get_env(\"" + str + "\")"
+            val = "getenv(\"" + str + "\")"
         else
             val = str
         return val
@@ -2702,8 +2702,9 @@ class ConvertBash {
             if (!str.empty()) return std::stoi(str.data()); \n\
             return defreturn; \n\
         }\n\
-        const int mystoiz(const std::string_view &str) { \n\
-            return mystoi(str, 0);\n\
+        const int mystoiz(const char *str) { \n\
+            if (str && (str[0] != 0)) return atoi(str); \n\
+            return 0; \n\
         }\n\
         \n\
         const std::string get_env(const std::string_view &cmd) { \n\
@@ -2896,7 +2897,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                 execcommand(outfd, cmd, exitstatus);\n\
                 writetoout(outfd, result, stdout, resultcollect);\n\
             } else {\n\
-                exitstatus = mystoiz(get_env(\"?\"));\n\
+                exitstatus = mystoiz(getenv(\"?\"));\n\
             }\n\
             return exitstatus == 0; \n\
         }\n\
@@ -2906,12 +2907,12 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                 if (cmd == \"0\") return true;\n\
                 if (cmd == \"1\") return false;\n\
             }\n\
-            exitstatus = mystoiz(get_env(\"?\"));\n\
+            exitstatus = mystoiz(getenv(\"?\"));\n\
             return exitstatus == 0; \n\
         }\n\
         const int checkexitcode(const std::string &cmd) { \n\
             int exitstatus; \n\
-            exitstatus = mystoiz(get_env(\"?\"));\n\
+            exitstatus = mystoiz(getenv(\"?\"));\n\
             return exitstatus == 0; \n\
         }\n\
         \n\
@@ -3264,23 +3265,23 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
 
         const incrementstr = "\n\
         const std::string pre_increment(const char *variable) {\n\
-            int val = mystoiz(get_env(variable)) + 1;\n\
+            int val = mystoiz(getenv(variable)) + 1;\n\
             set_env(variable, val);\n\
             return std::to_string(val);\n\
         }\n\
         const std::string post_increment(const char *variable) {\n\
-            int initval = mystoiz(get_env(variable));\n\
+            int initval = mystoiz(getenv(variable));\n\
             int val = initval + 1;\n\
             set_env(variable, val);\n\
             return std::to_string(initval);\n\
         }\n\
         const std::string pre_decrement(const char *variable) {\n\
-            int val = mystoiz(get_env(variable)) - 1;\n\
+            int val = mystoiz(getenv(variable)) - 1;\n\
             set_env(variable, val);\n\
             return std::to_string(val);\n\
         }\n\
         const std::string post_decrement(const char *variable) {\n\
-            int initval = mystoiz(get_env(variable));\n\
+            int initval = mystoiz(getenv(variable));\n\
             int val = initval - 1;\n\
             set_env(variable, val);\n\
             return std::to_string(initval);\n\

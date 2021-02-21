@@ -5,6 +5,7 @@ import time
 import subprocess
 
 repeat=0
+profile=0
 
 def execcommand(cmd):
 	list_files = subprocess.run(cmd, stdout=subprocess.PIPE)
@@ -198,6 +199,8 @@ def buildtest(testname=''):
             print(err)
             sys.exit(result)
         cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -fno-exceptions -lpcre -lpthread -std=c++17"
+        if profile:
+            cmd1 += " -pg"
         list=convertlist(cmd1)
         out0, result, err = execcommand(list)
         if result!=0:
@@ -212,6 +215,8 @@ def buildandexectestone(i):
         if result!=0:
             sys.exit(result)
         cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -fno-exceptions -flto -lpcre -lpthread -std=c++17"
+        if profile:
+            cmd1 += " -pg"
         list=convertlist(cmd1)
         out0, result, err = execcommand(list)
         if result!=0:
@@ -275,11 +280,15 @@ for a in sys.argv:
 		opt="-g -O0"
 	if a == "-n":
 		repeat=1
+	if a == "-p":
+		profile=1
 	if a == "-e":
 		runmeasuretest=1
 	if a == "-b":
 		runbuildtest=1
 	if a == "-h":
+		print("test.py -n run the same test continuously")
+		print("test.py -p enable profiling")
 		print("test.py -e to run build and exec tests only")
 		print("test.py -b to run build tests only")
 		print("test.py -O0 to reduce optimization level")
