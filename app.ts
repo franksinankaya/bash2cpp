@@ -2725,37 +2725,37 @@ class ConvertBash {
             return env ? true : false; \n\
         }\n\
         \n\
-        const std::string_view set_env(const std::string_view &cmd, const std::string &value) { \n\
+        const std::string_view set_env(const char *cmd, const std::string &value) { \n\
             if (value.back() == '\\n')\n\
-                setenv(cmd.data(), value.substr(0, value.length()-1).c_str(), 1);\n\
+                setenv(cmd, value.substr(0, value.length()-1).c_str(), 1);\n\
             else \n\
-                setenv(cmd.data(), value.c_str(), 1);\n\
+                setenv(cmd, value.c_str(), 1);\n\
             return \"\";\n\
         }\n\
         \n\
-        const std::string_view set_env(const std::string_view &cmd, const float value) { \n\
-            setenv(cmd.data(), std::to_string(value).c_str(), 1);\n\
+        const std::string_view set_env(const char *cmd, const float value) { \n\
+            setenv(cmd, std::to_string(value).c_str(), 1);\n\
             return \"\";\n\
         }\n\
         \n\
-        const std::string_view set_env(const std::string_view &cmd, const int value) { \n\
-            setenv(cmd.data(), std::to_string(value).c_str(), 1);\n\
+        const std::string_view set_env(const char *cmd, const int value) { \n\
+            setenv(cmd, std::to_string(value).c_str(), 1);\n\
             return \"\";\n\
         }\n\
         \n\
-        void set_env(const std::string_view &cmd, const char value) { \n\
-            setenv(cmd.data(), std::to_string(value).c_str(), 1);\n\
+        void set_env(const char *cmd, const char value) { \n\
+            setenv(cmd, std::to_string(value).c_str(), 1);\n\
         }\n\
-        const std::string set_env_ifunset(const std::string_view &cmd, const std::string_view &value) {\n\
+        const std::string set_env_ifunset(const char *cmd, const std::string_view &value) {\n\
         \n\
-            char *env = getenv(cmd.data()); \n\
+            char *env = getenv(cmd); \n\
             if (!env) { set_env(cmd, value.data()); return std::string(value.data()); } \n\
             return env;\n\
         }\n\
-        const std::string set_env_ifempty(const std::string_view &cmd, const std::string_view &value) { \n\
-            char *env = getenv(cmd.data()); \n\
+        const std::string set_env_ifempty(const char *cmd, const std::string_view &value) { \n\
+            char *env = getenv(cmd); \n\
             if (!env) { set_env(cmd, value.data()); return std::string(value);}\n\
-            if (envempty(cmd)) { set_env(cmd.data(), value.data()); return std::string(value.data());}\n\
+            if (envempty(cmd)) { set_env(cmd, value.data()); return std::string(value.data());}\n\
             return env;\n\
         }\n"
 
@@ -3210,7 +3210,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                 if (keysize)\n\
                     set_env(keys[0].c_str(), line);\n\
                 else \n\
-                    set_env(var, line);\n\
+                    set_env(var.data(), line);\n\
             }\n\
             set_env(\"?\", 0);\n\
             return \"\";\n\
@@ -3263,23 +3263,23 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         const processargsstr = text
 
         const incrementstr = "\n\
-        const std::string pre_increment(const std::string_view &variable) {\n\
+        const std::string pre_increment(const char *variable) {\n\
             int val = mystoiz(get_env(variable)) + 1;\n\
             set_env(variable, val);\n\
             return std::to_string(val);\n\
         }\n\
-        const std::string post_increment(const std::string_view &variable) {\n\
+        const std::string post_increment(const char *variable) {\n\
             int initval = mystoiz(get_env(variable));\n\
             int val = initval + 1;\n\
             set_env(variable, val);\n\
             return std::to_string(initval);\n\
         }\n\
-        const std::string pre_decrement(const std::string_view &variable) {\n\
+        const std::string pre_decrement(const char *variable) {\n\
             int val = mystoiz(get_env(variable)) - 1;\n\
             set_env(variable, val);\n\
             return std::to_string(val);\n\
         }\n\
-        const std::string post_decrement(const std::string_view &variable) {\n\
+        const std::string post_decrement(const char *variable) {\n\
             int initval = mystoiz(get_env(variable));\n\
             int val = initval - 1;\n\
             set_env(variable, val);\n\
