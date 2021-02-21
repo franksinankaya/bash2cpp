@@ -29,16 +29,14 @@ sudo update-alternatives \
 sudo update-alternatives \
 --install /usr/bin/g++ g++ /usr/bin/g++-9 100
 </pre>
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
 
 # INSTALLATION
+* git clone https://github.com/franksinankaya/bash2cpp.git
+* cd bash-parser
 * git submodule init
 * git submodule update
-* cd bash-parser
 * npm install --save-dev
-* npm run build
-* cd ..
-* npm install --save-dev typescript
-* npm install
 * npm run build
 
 # USAGE
