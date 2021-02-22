@@ -260,7 +260,8 @@ class ConvertBash {
 					 CommandExpansion |
 					 ParameterExpansion>
      */
-    private getAssignmentPair(command: any): [string, string, boolean] {
+    private getAssignmentPair(command: any): [string, string, boolean, boolean] {
+        var isexpansion = false
         if (this.validExpansion(command)) {
             const text = this.convertWord(command)
             const equalpos = text.indexOf("=")
@@ -283,7 +284,8 @@ class ConvertBash {
                 )
                 expansion = "\"" + expansion
 
-            return [variableName, expansion, false]
+            isexpansion = true
+            return [variableName, expansion, false, isexpansion]
             //return `set_env("${variableName}", ${expansion})`;
         }
 
@@ -291,7 +293,7 @@ class ConvertBash {
 
         const equalpos = command.text.indexOf("=")
         if (equalpos == -1)
-            return [ command.text, "", false]
+            return [command.text, "", false, isexpansion]
         const variableName = command.text.substr(0, equalpos)
         variableValue = command.text.substr(equalpos + 1, command.text.length)
         let startindex = 0
@@ -299,14 +301,15 @@ class ConvertBash {
         if (variableValue.indexOf("~") != -1) {
             variableValue = this.replaceAll(variableValue, "~", "\" + get_env(\"HOME\") + \"")
             variableValue = "\"" + variableValue + "\""
-            return [variableName, variableValue, false]
+            isexpansion = true
+            return [variableName, variableValue, false, isexpansion]
             //return `set_env("${variableName}", ${variableValue})`;
         }
 
         variableValue = this.convertQuotes(command.expansion, variableValue)
         if (!variableValue.startsWith('"') && !this.isNumeric(variableValue))
-            return [variableName, variableValue, true]
-        return [variableName, variableValue, false]
+            return [variableName, variableValue, true, isexpansion]
+        return [variableName, variableValue, false, isexpansion]
 
         // auto-quote value if it doesn't start with quote
         //if (!variableValue.startsWith('"') && !this.isNumeric(variableValue))
@@ -315,10 +318,16 @@ class ConvertBash {
     }
 
     private convertAssignment(command: any): string {
-        let [variableName, variableValue, needsquote] = this.getAssignmentPair(command)
-        if (!needsquote)
-            return `set_env("${variableName}", ${variableValue})`;
-        return `set_env("${variableName}", "${variableValue}")`;
+        let [variableName, variableValue, needsquote, expansion] = this.getAssignmentPair(command)
+        if (this.validExpansion(command) || expansion) {
+            if (!needsquote)
+                return `set_env("${variableName}", ${variableValue})`;
+            return `set_env("${variableName}", "${variableValue}")`;
+        } else {
+            if (!needsquote)
+                return `setenv("${variableName}", ${variableValue}, 1)`;
+            return `setenv("${variableName}", "${variableValue}", 1)`;
+        }
     }
 
     private isNumeric(val: any): boolean {
@@ -2837,13 +2846,13 @@ class ConvertBash {
         const std::string set_env_ifunset(const char *cmd, const std::string_view &value) {\n\
         \n\
             char *env = getenv(cmd); \n\
-            if (!env) { set_env(cmd, value.data()); return std::string(value.data()); } \n\
+            if (!env) { setenv(cmd, value.data(), 1); return std::string(value.data()); } \n\
             return env;\n\
         }\n\
         const std::string set_env_ifempty(const char *cmd, const std::string_view &value) { \n\
             char *env = getenv(cmd); \n\
-            if (!env) { set_env(cmd, value.data()); return std::string(value);}\n\
-            if (envempty(cmd)) { set_env(cmd, value.data()); return std::string(value.data());}\n\
+            if (!env) { setenv(cmd, value.data(), 1); return std::string(value);}\n\
+            if (envempty(cmd)) { setenv(cmd, value.data(), 1); return std::string(value.data());}\n\
             return env;\n\
         }\n"
 
@@ -3550,7 +3559,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             "    scopedvariable(const std::string_view &env, const std::string_view &newval) {\n" +
             "        m_env = env;\n" +
             "        m_backup = get_env(env);\n" +
-            "        set_env(env.data(), newval.data());\n" +
+            "        setenv(env.data(), newval.data(), 1);\n" +
             "    }\n" +
             "    scopedvariable(const std::string_view &env) {\n" +
             "        m_env = env;\n" +
