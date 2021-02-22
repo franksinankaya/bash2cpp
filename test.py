@@ -40,7 +40,7 @@ if params.enableprofiling:
     profile=params.enableprofiling
 
 if params.reduceoptimization:
-    opt="-O0"
+    opt="-O0 -g"
 
 if params.exectests:
     runmeasuretestonly=params.exectests

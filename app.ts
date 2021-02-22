@@ -716,7 +716,14 @@ class ConvertBash {
             let cmd = "checkexec"
             let isinternal = this.isKnownFunction(clausecommands.name, clausecommands.suffix)
             if (isinternal)
+                cmd = "checkknownexec"
+            let isbuiltin = this.isBuiltinFunction(clausecommands.name, clausecommands.suffix)
+            if (isbuiltin)
                 cmd = "checkbuiltinexec"
+            let name = clausecommands.name ? clausecommands.name.text : ""
+            if (name && (name.text == "!") && clausecommands.suffix.length > 0) {
+                name = clausecommands.suffix[0].text
+            }
             let negative = false
             if (clausecommands.commands && clausecommands.commands[0].name && clausecommands.commands[0].name.text == "!") {
                 negative = true
@@ -733,16 +740,29 @@ class ConvertBash {
                 } else {
                     this.terminate(clausecommands.commands[0])
                 }
+            } else if (isbuiltin) {
+                if (clausecommands.suffix) {
+                    clausecommands.name = clausecommands.suffix[0]
+                    clausecommands.suffix.shift()
+                } else {
+                    this.terminate(clausecommands.commands[0])
+                }
             }
             if (clausecommands.type == "Pipeline") {
                 cmd = "checkexitcode"
             }
             if ((name != "!") && !negative) {
-                clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, false, true, [], false, async) + ")"
+                if (!isbuiltin)
+                    clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, false, true, [], false, async) + ")"
+                else
+                    clause = " " + cmd + "(" + name + ", " + this.convertExecCommand(clausecommands, false, true, [], false, async) + ")"
             }
             else {
                 const clauseexpansion = this.convertExecCommand(clausecommands, false, true, [], false, async)
-                clause = "!" + cmd + "(" + clauseexpansion + ")"
+                if (!isbuiltin)
+                    clause = "!" + cmd + "(" + clauseexpansion + ")"
+                else
+                    clause = "!" + cmd + "(" + name + ", " + clauseexpansion + ")"
             }
         }
 
@@ -2953,7 +2973,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             }\n\
             return exitstatus == 0; \n\
         }\n\
-        const int checkbuiltinexec(const std::string_view &cmd) { \n\
+        const int checkknownexec(const std::string_view &cmd) { \n\
             int exitstatus; \n\
             if (!cmd.empty()) {\n\
                 if (cmd == \"0\") return true;\n\
@@ -3222,6 +3242,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         void echo(const std::string_view &str)\n\
         {\n\
             echov(str); \n\
+            set_env(\"?\", 0);\n\
         }\n\
         \n\
         void echo(const float value) {\n\
@@ -3491,6 +3512,12 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             scopeexitcout scope(false);\n\
             f(arg);\n\
             return scope.buf().str();\n\
+        }\n\
+        const int checkbuiltinexec(void (*f)(const std::string_view &arg), const std::string_view &arg) { \n\
+            f(arg);\n\
+            int exitstatus; \n\
+            exitstatus = mystoiz(getenv(\"?\"));\n\
+            return exitstatus == 0; \n\
         }\n"
 
         let upperstr = "std::string upper(const std::string_view &str)\n" +
