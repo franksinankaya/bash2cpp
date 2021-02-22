@@ -5,7 +5,7 @@ const file = readFileSync(process.argv[2], 'utf-8');
 const babylon = require('babylon');
 
 class ConvertBash {
-    private builtindefs: any = ["echo", "cd"]
+    private builtindefs: any = ["echo", "cd", "printf"]
     private functiondefs: any = []
     private asyncs: any = []
     private redirects: any = []
@@ -2037,6 +2037,28 @@ class ConvertBash {
                         return text
                     }
                 }
+            case 'printf':
+                {
+                    let text = ""
+                    if ((suffixprocessed.substring(0, 2) == "\"'") && (suffixprocessed.substring(suffixprocessed.length - 2, suffixprocessed.length) == "'\"")) {
+                        suffixprocessed = '"' + suffixprocessed.substring(2, suffixprocessed.length - 2) + '"'
+                    }
+                    if ((suffixprocessed.substring(0, 1) == "'") && (suffixprocessed.substring(suffixprocessed.length - 1, suffixprocessed.length) == "'")) {
+                        suffixprocessed = suffixprocessed.substring(1, suffixprocessed.length - 1)
+                    }
+
+                    if (issuesystem) {
+                        text += "printf("
+
+                        if (suffixprocessed)
+                            text += suffixprocessed
+                        else
+                            text += "\"\""
+
+                        text += ")"
+                        return text
+                    }
+                }
             // falls through
             case 'cd':
                 {
@@ -3239,6 +3261,42 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             }\n\
             return (str); \n\
         }\n\
+auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
+    for(const auto &s : v) {\n\
+        fmt = fmt % s;\n\
+    }\n\
+    return fmt;\n\
+}\n\
+        void printf(const std::string_view &str)\n\
+        {\n\
+            std::vector<char *> toks;\n\
+            wordexp_t p;\n\
+            char **w;\n\
+            int ret;\n\
+                \n\
+            ret = wordexp(str.data(), &p, 0);\n\
+            if (ret) {\n\
+                printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                exit(-1);\n\
+             };\n\
+            w = p.we_wordv;\n\
+            toks.reserve(p.we_wordc);\n\
+            for (int i = 0; i < p.we_wordc; i++) {\n\
+                toks.emplace_back(w[i]);\n\
+            }\n\
+            boost::format fmt(toks[0]);\n\
+            toks.erase(toks.begin());\n\
+            std::stringstream outstr;\n\
+            std::string strval = format_vector(fmt, toks).str();\n\
+            std::vector <std::string> tokens;\n\
+            std::string delim = \"\\\\n\"; \n\
+            split(tokens, strval, delim);\n\
+            for (auto &a : tokens)\n\
+                std::cout << a << std::endl;\n\
+            wordfree(&p);\n\
+            set_env(\"?\", 0);\n\
+        }\n\
+        \n\
         void echo(const std::string_view &str)\n\
         {\n\
             echov(str); \n\
@@ -3617,6 +3675,7 @@ try {
         "#include <stdarg.h>\n" +
         "#include <memory>\n" +
         "#include <sys/ioctl.h>\n" +
+        "#include <boost/format.hpp>\n" +
         "#include <iostream>\n" +
         "#include <regex>\n" +
         "#include <iterator>\n" +

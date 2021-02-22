@@ -2,8 +2,10 @@
 
 bash2cpp converts simple bash scripts to c++ code.
 It requires c++17 for file IO and expects c++ code to run in Linux.
+Code also uses boost::format for printf format specifier conversion.
 Though, with some effort Linux dependency can be removed but this is not
 in radar at this moment.
+
 
 Reasons why you may want to try bash2cpp are:
 1. Faster execution time by using native binary as opposed to shell script.
