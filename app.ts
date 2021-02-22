@@ -1,9 +1,11 @@
 const fs = require('fs');
 import { readFileSync } from 'fs';
+import { assert } from 'console';
 const file = readFileSync(process.argv[2], 'utf-8');
 const babylon = require('babylon');
 
 class ConvertBash {
+    private builtindefs: any = ["echo", "cd"]
     private functiondefs: any = []
     private asyncs: any = []
     private redirects: any = []
@@ -1845,6 +1847,22 @@ class ConvertBash {
         return redirecttext
     }
 
+    public isBuiltinFunction(name: any, suffixarray: any) {
+        let sarray = suffixarray
+        if (name && (name.text == "!") && sarray.length > 0) {
+            name = suffixarray[0]
+        }
+        if (!name)
+            return false;
+        for (let v = 0; v < this.builtindefs.length; v++) {
+            let func = this.builtindefs[v]
+            if (func == name.text) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public isKnownFunction(name: any, suffixarray: any) {
         let sarray = suffixarray
         if (name && (name.text == "!") && sarray.length > 0) {
@@ -2261,7 +2279,11 @@ class ConvertBash {
         let text = ""
         let pipeline = false
         let isinternal = false
+        let isbuiltin = false
         if (command.loc.start >= 0 && command.loc.end > 0) {
+            if (command.commandAST.commands.length != 1)
+                this.terminate(command.commandAST.commands)
+
             for (let i = 0; i < command.commandAST.commands.length; i++) {
                 let collectresults = true
                 if (command.commandAST.commands[0].type == "Pipeline")
@@ -2273,10 +2295,22 @@ class ConvertBash {
                 if (this.isKnownFunction(command.commandAST.commands[i].name, command.commandAST.commands[i].suffix)) {
                     isinternal = true;
                 }
+                if (this.isBuiltinFunction(command.commandAST.commands[i].name, command.commandAST.commands[i].suffix)) {
+                    isbuiltin = true;
+                }
             }
             if (!pipeline) {
                 if (isinternal) {
                     text = "execinternal(" + command.commandAST.commands[0].name.text + ")"
+                }
+                else if (isbuiltin) {
+                    let ignoreRedirects = true
+                    if (command.commandAST.commands[0].name.text == "exec")
+                        ignoreRedirects = false
+
+                    let currentline = this.lines[this.currentrowstart.row - 1]
+                    let [suffix,] = command.commandAST.commands[0].suffix ? this.convertExpansion(command.commandAST.commands[0].suffix, ignoreRedirects, currentline) : ["", false];
+                    text = "execbuiltin(" + command.commandAST.commands[0].name.text + ", " + suffix + ")"
                 } else {
                     text = "execnoout(" + text + ")"
                 }
@@ -3450,6 +3484,12 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         {\n\
             scopeexitcout scope(false);\n\
             f({});\n\
+            return scope.buf().str();\n\
+        }\n\
+        std::string execbuiltin(void (*f)(const std::string_view &arg), const std::string_view &arg)\n\
+        {\n\
+            scopeexitcout scope(false);\n\
+            f(arg);\n\
             return scope.buf().str();\n\
         }\n"
 
