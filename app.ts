@@ -3371,12 +3371,12 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         }\n"
 
         const cdstr = "\n\
-        void cd(const std::string &directory) {\n\
+        void cd(const std::string_view &directory) {\n\
             std::vector<char> cwd;\n\
             if (chdir(directory.data())) return;\n\
             long size = pathconf(\".\", _PC_PATH_MAX);\n\
             cwd.reserve(size);\n\
-            set_env(\"PWD\", getcwd(cwd.data(), (size_t)size));\n\
+            setenv(\"PWD\", getcwd(cwd.data(), (size_t)size), 1);\n\
             set_env(\"?\", 0);\n\
         }\n"
 
@@ -3559,7 +3559,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             "    scopedvariable(const std::string_view &env, const std::string_view &newval) {\n" +
             "        m_env = env;\n" +
             "        m_backup = get_env(env);\n" +
-            "        setenv(env.data(), newval.data(), 1);\n" +
+            "        set_env(env.data(), newval.data());\n" +
             "    }\n" +
             "    scopedvariable(const std::string_view &env) {\n" +
             "        m_env = env;\n" +
