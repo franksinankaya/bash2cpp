@@ -1566,9 +1566,11 @@ class ConvertBash {
         return text
     }
 
-    public convertRangeExpansion(commandwordlist: any, assignment: any = true, delimiter: any = ","): [string, string] {
+    public convertRangeExpansion(commandwordlist: any, assignment: any = true, delimiter: any = ","): [string, string, boolean] {
         let text = ""
         var countstr = ""
+        let isstdstring = false
+        let vector = false
         if (commandwordlist &&(commandwordlist.length == 1) && commandwordlist[0].text[0] == "{") {
             const statements = commandwordlist[0].text.split("{")
             if (!assignment)
@@ -1580,10 +1582,10 @@ class ConvertBash {
                 const limiters = statements[s].split("..")
                 let start = limiters[0]
                 if (!start)
-                    return ["", ""]
+                    return ["", "", vector]
                 let end = limiters[1]
                 if (!end)
-                    return ["", ""]
+                    return ["", "", vector]
                 let increment = limiters.length > 2 ? parseInt(limiters[2].substring(0, limiters[2].length - 1)) : 1
                 text += this.getRange(start, end, increment, delimiter, assignment)
             }
@@ -1596,8 +1598,10 @@ class ConvertBash {
             }
         }
         else if (commandwordlist && (commandwordlist.length == 1) && this.isRegexExpression(commandwordlist[0].text)) {
-            if (assignment)
+            if (assignment) {
                 text += "std::vector<std::string> vals = {\n"
+                vector = true
+            }
             text += "globvector(\"" + commandwordlist[0].text + "\")"
             if (assignment) {
                 text += "\n"
@@ -1607,6 +1611,7 @@ class ConvertBash {
         }
         else if (!commandwordlist)
         {
+            vector = true
             text += "std::vector<std::string> vals; \n"
             text += "regexsplit(vals, get_env(\"@\"));\n"
             countstr = "int length = vals.size();\n"
@@ -1620,7 +1625,6 @@ class ConvertBash {
                     break
                 }
             }
-            let vector = false
             if (assignment) {
                 if (hasExpansion) {
                     text += "std::vector<std::string> vals;\n"
@@ -1665,7 +1669,7 @@ class ConvertBash {
             }
         }
 
-        return [text, countstr]
+        return [text, countstr, vector]
     }
 
     public extractForParam(left: any): string {
@@ -1754,12 +1758,15 @@ class ConvertBash {
         }
 
         text += "{\n"
-        let [t, countstr] = this.convertRangeExpansion(command.wordlist)
+        let [t, countstr, vector] = this.convertRangeExpansion(command.wordlist)
         text += t
         text += countstr
         text += "for (int i =0; i < length; i++)"
         text += "{\n"
-        text += "set_env(\"" + command.name.text + "\", vals[i]);\n"
+        if (vector)
+            text += "setenv(\"" + command.name.text + "\", vals[i].c_str(), 1);\n"
+        else
+            text += "setenv(\"" + command.name.text + "\", vals[i], 1);\n"
         const cmds = this.convertCommand(command.do);
         text += cmds + ";\n";
         text += "};\n"
