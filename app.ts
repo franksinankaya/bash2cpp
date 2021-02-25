@@ -3622,7 +3622,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         "{\n"  +
             "int exitstatus;\n" +
             "std::string result;\n" +
-            "std::string cmd = \"bash -c 'set -a && source \" + fname + \" && set +a && env'\";\n" +
+            "std::string cmd = \"sh -c 'set -a && . \" + fname + \" && set +a && env'\";\n" +
             "std::vector<char *> toks{(char*)\"bash\", (char*)\"-c\", cmd.data(), (char*)NULL};\n" +
             "char nChar;\n" +
             "int outfd[2];\n" +
