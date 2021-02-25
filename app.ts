@@ -2954,28 +2954,20 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             char databuf[bufsize + 1];\n\
             databuf[bufsize] = 0;\n\
             while (read(outfd[0], &nChar, 1) == 1) {\n\
-                if (stdout)\n\
-                    std::cout << nChar;\n\
-                if (resultcollect) result += nChar;\n\
-                \n\
                 ioctl(outfd[0], FIONREAD, &available);\n\
-                if (available && resultcollect) result.reserve(available + 2);\n\
-                if (resultcollect && !stdout) {\n\
-                    while (available / bufsize) {\n\
-                        if (read(outfd[0], &databuf[0], bufsize) < 0) break;;\n\
-                        result += databuf;\n\
-                        available -= bufsize;\n\
+                if (resultcollect) {\n\
+					result += nChar;\n\
+                    result.reserve(available + 1);\n\
+					int count = available / bufsize;\n\
+                    for (int i = 0; i < count; i++) {\n\
+                        if (read(outfd[0], &result[1 + (i * bufsize)], bufsize) < 0) break;;\n\
                     }\n\
+                    if (stdout) std::cout << result; \n\
                 }\n\
-                else if (resultcollect && stdout) {\n\
-                    while (available / bufsize) {\n\
-                        if (read(outfd[0], &databuf[0], bufsize) < 0) break;\n\
-                        result += databuf;\n\
-                        std::cout << databuf;\n\
-                        available -= bufsize;\n\
-                    }\n\
-                }\n\
-                else if (!resultcollect && stdout) {\n\
+                else if (stdout) {\n\
+					if (stdout)\n\
+						std::cout << nChar;\n\
+					\n\
                     while (available / bufsize) {\n\
                         if (read(outfd[0], &databuf[0], bufsize) < 0) break;\n\
                         std::cout << databuf;\n\
