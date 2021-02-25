@@ -2957,11 +2957,8 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                 ioctl(outfd[0], FIONREAD, &available);\n\
                 if (resultcollect) {\n\
 					result += nChar;\n\
-                    result.reserve(available + 1);\n\
-					int count = available / bufsize;\n\
-                    for (int i = 0; i < count; i++) {\n\
-                        if (read(outfd[0], &result[1 + (i * bufsize)], bufsize) < 0) break;;\n\
-                    }\n\
+                    result.resize(available + 1);\n\
+					if (read(outfd[0], &result[1], available) < 0) exit(-1);\n\
                     if (stdout) std::cout << result; \n\
                 }\n\
                 else if (stdout) {\n\
@@ -2973,14 +2970,13 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                         std::cout << databuf;\n\
                         available -= bufsize;\n\
                     }\n\
-                }\n\
-                if (available % bufsize) {\n\
-                    if (read(outfd[0], &databuf[0], available % bufsize) > 0) {\n\
-                    databuf[available % bufsize] = 0;\n\
-                    if (stdout)\n\
-                        std::cout << databuf;\n\
-                    if (resultcollect) result += databuf;\n\
-                    }\n\
+					if (available % bufsize) {\n\
+						if (read(outfd[0], &databuf[0], available % bufsize) > 0) {\n\
+						databuf[available % bufsize] = 0;\n\
+						if (stdout)\n\
+							std::cout << databuf;\n\
+						}\n\
+					}\n\
                 }\n\
             }\n\
             close(outfd[0]); \n\
