@@ -2872,13 +2872,13 @@ int createChild(int *outfd, std::vector<char *> &aArguments) {\n\
     int nResult;\n\
 \n\
     if (pipe(aStdinPipe) < 0) {\n\
-        printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+        fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
         exit(-1);\n\
     }\n\
     if (pipe(aStdoutPipe) < 0) {\n\
         close(aStdinPipe[PIPE_READ]);\n\
         close(aStdinPipe[PIPE_WRITE]);\n\
-        printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+        fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
         exit(-1);\n\
     }\n\
 \n\
@@ -2886,12 +2886,12 @@ int createChild(int *outfd, std::vector<char *> &aArguments) {\n\
     if (0 == nChild) {\n\
         close(outfd[0]);\n\
         if (dup2(outfd[1], STDOUT_FILENO) == -1) {\n\
-            printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+            fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
             exit(errno);\n\
         }\n\
 \n\
         if (dup2(outfd[1], STDERR_FILENO) == -1) {\n\
-            printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+            fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
             exit(errno);\n\
         }\n\
 \n\
@@ -2934,7 +2934,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         \n\
     ret = wordexp(cmd.data(), &p, 0);\n\
     if (ret) {\n\
-        printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+        fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
         exit(-1);\n\
      };\n\
     w = p.we_wordv;\n\
@@ -2958,7 +2958,10 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                 if (resultcollect) {\n\
 					result += nChar;\n\
                     result.resize(available + 1);\n\
-					if (read(outfd[0], &result[1], available) < 0) exit(-1);\n\
+					if (read(outfd[0], &result[1], available) < 0) {\n\
+						fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
+						exit(-1);\n\
+					}\n\
                     if (stdout) std::cout << result; \n\
                 }\n\
                 else if (stdout) {\n\
@@ -2987,7 +2990,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                 std::string result;\n\
                 int outfd[2];\n\
                 if (pipe(outfd) < 0) {\n\
-                    printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                    fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
                     exit(-1);\n\
                 }\n\
                 bool stdout = true;\n bool resultcollect = false;\n\
@@ -3020,7 +3023,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             char nChar;\n\
             int outfd[2];\n\
             if (pipe(outfd) < 0) {\n\
-                printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
                 exit(-1);\n\
             }\n\
             execcommand(outfd, cmd, exitstatus);\n\
@@ -3035,7 +3038,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             char nChar;\n\
             int outfd[2];\n\
             if (pipe(outfd) < 0) {\n\
-                printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
                 exit(-1);\n\
             }\n\
             bool stdout = true;\n bool resultcollect = false;\n\
@@ -3050,7 +3053,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             char nChar;\n\
             int outfd[2];\n\
             if (pipe(outfd) < 0) {\n\
-                printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
                 exit(-1);\n\
             }\n\
             bool stdout = false;\n\
@@ -3280,7 +3283,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
                 \n\
             ret = wordexp(str.data(), &p, 0);\n\
             if (ret) {\n\
-                printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
                 exit(-1);\n\
              };\n\
             w = p.we_wordv;\n\
@@ -3474,7 +3477,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
 	scopeexitcincout(bool stdout = false) {\n\
 		if (!stdout) std::cout.rdbuf(buffer.rdbuf());\n\
         if (pipe(readfd) < 0) {\n\
-            printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+            fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
             exit(-1);\n\
         }\n\
 		m_inbackup = dup(0);\n\
@@ -3495,7 +3498,10 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
 	}\n\
 \n\
 	void writecin(std::stringstream &str) {\n\
-		if (write(readfd[1], str.str().data(), str.str().length()) < 0) exit(-1);\n\
+		if (write(readfd[1], str.str().data(), str.str().length()) < 0) {\n\
+			fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
+			exit(-1);\n\
+		}\n\
 		close(readfd[1]);\n\
 	}\n\
 };\n\
@@ -3615,7 +3621,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             "char nChar;\n" +
             "int outfd[2];\n" +
             "if (pipe(outfd) < 0) {\n\
-                    printf(\"%s:%d\\n\", __func__, __LINE__);\n\
+                    fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
                     exit(-1);\n\
                 }\n" +
             "bool stdout = false;\n bool resultcollect = true;\n" +
