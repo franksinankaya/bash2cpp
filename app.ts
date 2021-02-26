@@ -734,17 +734,26 @@ class ConvertBash {
                 name = clausecommands.suffix[0].text
             }
             let negative = false
+            if (clausecommands.commands && clausecommands.commands[0].name && clausecommands.commands[0].name.negative) {
+                negative = true
+            }
+            if (clausecommands.name && clausecommands.name.negative) {
+                negative = true
+            }
             if (clausecommands.commands && clausecommands.commands[0].name && clausecommands.commands[0].name.text == "!") {
                 negative = true
                 if (clausecommands.commands[0].suffix) {
                     clausecommands.commands[0].name = clausecommands.commands[0].suffix[0]
+                    clausecommands.commands[0].name.negative = true
                     clausecommands.commands[0].suffix.shift()
                 } else {
                     this.terminate(clausecommands.commands[0])
                 }
             } else if (name == "!") {
+                negative = true
                 if (clausecommands.suffix) {
                     clausecommands.name = clausecommands.suffix[0]
+                    clausecommands.name.negative = true
                     clausecommands.suffix.shift()
                 } else {
                     this.terminate(clausecommands.commands[0])
