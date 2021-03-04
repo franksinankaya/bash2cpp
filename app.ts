@@ -2947,9 +2947,6 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         const void writetoout(int *outfd, std::string &result, bool stdout, bool resultcollect) { \n\
             char nChar;\n\
             size_t available = 0;\n\
-            const int bufsize = 4096;\n\
-            char databuf[bufsize + 1];\n\
-            databuf[bufsize] = 0;\n\
             while (read(outfd[0], &nChar, 1) == 1) {\n\
                 ioctl(outfd[0], FIONREAD, &available);\n\
                 if (resultcollect) {\n\
@@ -2962,6 +2959,9 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                     if (stdout) std::cout << result; \n\
                 }\n\
                 else if (stdout) {\n\
+                    const int bufsize = 4096;\n\
+                    char databuf[bufsize + 1];\n\
+                    databuf[bufsize] = 0;\n\
 					if (stdout)\n\
 						std::cout << nChar;\n\
 					\n\
