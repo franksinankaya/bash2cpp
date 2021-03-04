@@ -2023,19 +2023,7 @@ class ConvertBash {
                     return "return " + retval
                 }
             case 'set':
-                if (suffixprocessed) {
-                    suffixprocessed = "\") + " + suffixprocessed
-                }
-
-                if (suffixarray && suffixarray.length === 1 && suffixarray[0].text === '-e') {
-                    console.log('skipping "set -e"');
-                    return '';
-                } else if (suffixarray && suffixarray.length === 1 && suffixarray[0].text === '-v') {
-                    console.log('skipping "set -v"');
-                    return '';
-                } else {
-                    return `${name.text}${suffixprocessed}`;
-                }
+                return '';
             case 'read':
                 return "readval(" + suffixprocessed + ")"
             case ':':
