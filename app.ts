@@ -1622,7 +1622,7 @@ class ConvertBash {
         {
             vector = true
             text += "std::vector<std::string> vals; \n"
-            text += "regexsplit(vals, get_env(\"@\"));\n"
+            text += "regexsplit(vals, getenv(\"@\"));\n"
             countstr = "int length = vals.size();\n"
         }
         else {
@@ -1997,7 +1997,7 @@ class ConvertBash {
         switch (name.text) {
             case 'exit':
                 {
-                    const retval = suffixprocessed ? "mystoi(std::string_view(" + suffixprocessed + "))" : "mystoi(get_env(\"?\"))"
+                    const retval = suffixprocessed ? "mystoi(std::string_view(" + suffixprocessed + "))" : "mystoi(getenv(\"?\"))"
                     return "exit(" + retval + ")"
                 }
             case '.':
@@ -2019,7 +2019,7 @@ class ConvertBash {
                 return "continue"
             case 'return':
                 {
-                    const retval = suffixprocessed ? "std::string(" + suffixprocessed + ")" : "get_env(\"?\")"
+                    const retval = suffixprocessed ? "std::string(" + suffixprocessed + ")" : "getenv(\"?\")"
                     return "return " + retval
                 }
             case 'set':
@@ -2811,6 +2811,10 @@ class ConvertBash {
             const char *env = getenv(cmd.data());\n\
             return env ? env : \"\"; \n\
         }\n\
+        void get_env(std::string &envstr, const std::string_view &cmd) { \n\
+            const char *env = getenv(cmd.data());\n\
+            envstr = env ? env : \"\"; \n\
+        }\n\
         \n\
         const int envexists_and_hascontent(const std::string_view &cmd) { \n\
             char *env = getenv(cmd.data()); \n\
@@ -3255,8 +3259,8 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         \n\
         std::string ifscombine(const std::vector<std::string> &vec)\n\
         {\n\
-            const std::string separator = get_env(\"IFS\");\n\
-            std::string str = \"\";\n\
+            const std::string separator(get_env(\"IFS\"));\n\
+            std::string str(\"\");\n\
             int vecsize = vec.size();\n\
             for (int i = 0; i < vecsize; i++) {\n\
                 str += vec[i];\n\
@@ -3386,7 +3390,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         text += "{\n"
         text += "    list.reserve(maxargs);\n"
         text += "    for (int i = 0; i < maxargs; i++) {\n"
-        text += "        list.emplace_back(get_env(std::to_string(i + 1).c_str()));\n"
+        text += "        list.emplace_back(getenv(std::to_string(i + 1).c_str()));\n"
         text += "    }\n"
         text += "}\n"
         text += "void processargs(std::initializer_list<std::string> &list, int maxargs)\n"
@@ -3556,12 +3560,12 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             "    public:\n" +
             "    scopedvariable(const std::string_view &env, const std::string_view &newval) {\n" +
             "        m_env = env;\n" +
-            "        m_backup = get_env(env);\n" +
+            "        get_env(m_backup, env);\n" +
             "        set_env(env.data(), newval.data());\n" +
             "    }\n" +
             "    scopedvariable(const std::string_view &env) {\n" +
             "        m_env = env;\n" +
-            "        m_backup = get_env(env);\n" + 
+            "        get_env(m_backup, env);\n" +
             "    }\n" +
             "    ~scopedvariable(){setenv(m_env.c_str(), m_backup.c_str(), 1);}\n" +
             "};\n\
