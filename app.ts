@@ -859,7 +859,7 @@ class ConvertBash {
         if (name[0] == '"' && name[name.length - 1] == '"') {
             name = name.substring(1, name.length - 2)
         }
-        text += "std::string " + name + "(std::initializer_list<std::string> list) {\n"
+        text += "const std::string " + name + "(const std::initializer_list<std::string> list) {\n"
         text += "scopeparams prms" + name + "(list, " + parseInt(maxargs) + ");\n"
         text += "scopeexitcout scope(true);\n"
 
@@ -2573,7 +2573,7 @@ class ConvertBash {
             let text = ""
             for (let v = 0; v < this.functiondefs.length; v++) {
                 let command = this.functiondefs[v][0]
-                text += "std::string " + this.convertCommand(command.name) + "(std::initializer_list<std::string> list);\n"
+                text += "const std::string " + this.convertCommand(command.name) + "(const std::initializer_list<std::string> list);\n"
             }
             return text ? "\n\n" + text + "\n\n" : ""
         }
@@ -2600,7 +2600,7 @@ class ConvertBash {
             for (let v = 0; v < this.redirects.length; v++) {
                 let name = "redirects" + v
 
-                text += "std::string " + name + "(const std::string_view &str) {\n"
+                text += "const std::string " + name + "(const std::string_view &str) {\n"
                 let redir = "execnoout(str);\n"
                 for (let r = this.redirects[v][0].suffix.length - 1; r >= 0; r--) {
                     if (this.redirects[v][0].suffix[r].type == "Redirect") {
@@ -2664,7 +2664,7 @@ class ConvertBash {
             for (let v = 0; v < this.pipelines.length; v++) {
                 let name = "pipeline" + v
 
-                text += "std::string " + name + "(bool stdout = true) {\n"
+                text += "const std::string " + name + "(bool stdout = true) {\n"
 
                 for (let c = 0; c < this.pipelines[v][0].commands.length; c++) {
                     let scope = "scope" + c.toString()
@@ -3117,7 +3117,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             }\n\
         }\n\
         \n\
-        std::vector <std::string> split(const std::string_view &s, bool ifs = true) {\n\
+        const std::vector <std::string> split(const std::string_view &s, bool ifs = true) {\n\
             std::string delim = \" \\t\\n\"; \n\
             std::vector <std::string> elems;\n\
             const char *userdelim = getenv(\"IFS\");\n\
@@ -3176,7 +3176,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             return false;\n\
         }\n\
         \n\
-        std::vector<std::string> globvector(const std::string_view& pattern){\n\
+        const std::vector<std::string> globvector(const std::string_view& pattern){\n\
             glob_t glob_result;\n\
             glob(pattern.data(), GLOB_TILDE, NULL,& glob_result);\n\
             std::vector <std::string> files;\n\
@@ -3197,7 +3197,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             globfree(& glob_result);\n\
         }\n\
         \n\
-        std::vector <std::string> regexsplit(const std::string_view &str)\n\
+        const std::vector <std::string> regexsplit(const std::string_view &str)\n\
         {\n\
             if (isregexstring(str)) {\n\
                 return globvector(str);\n\
@@ -3257,7 +3257,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             }\n\
         }\n\
         \n\
-        std::string ifscombine(const std::vector<std::string> &vec)\n\
+        const std::string ifscombine(const std::vector<std::string> &vec)\n\
         {\n\
             const std::string separator(get_env(\"IFS\"));\n\
             std::string str(\"\");\n\
@@ -3322,7 +3322,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         }\n"
 
         const readstr = "\n\
-        std::string readval(const std::string_view &var) {\n\
+        const std::string readval(const std::string_view &var) {\n\
             std::string line;\n\
             if (!std::getline(std::cin, line)) {\n\
                 set_env(\"?\", -1);\n\
@@ -3365,7 +3365,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             return \"\";\n\
         }\n\
         \n\
-        std::string readval(void) {\n\
+        const std::string readval(void) {\n\
             return readval(\"REPLY\");\n\
         }\n"
 
@@ -3380,7 +3380,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         }\n"
 
         let text = ""
-        text += "void restoreargs(std::vector<std::string> &list, int maxargs)\n"
+        text += "void restoreargs(const std::vector<std::string> &list, int maxargs)\n"
         text += "{\n"
         text += "    for (int i = 0; i < maxargs; i++) {\n"
         text += "        setenv(std::to_string(i + 1).c_str(), list[i].c_str(), 1);\n"
@@ -3393,7 +3393,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         text += "        list.emplace_back(getenv(std::to_string(i + 1).c_str()));\n"
         text += "    }\n"
         text += "}\n"
-        text += "void processargs(std::initializer_list<std::string> &list, int maxargs)\n"
+        text += "void processargs(const std::initializer_list<std::string> &list, int maxargs)\n"
         text += "{\n"
         text += "    int i = 0;\n"
         text += "    std::string combinedargs;\n"
@@ -3455,7 +3455,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
     "    int m_maxargs;\n" +
     "    std::vector<std::string> m_vec;\n" +
     "public:\n" +
-    "    scopeparams(std::initializer_list<std::string> &list, int maxargs): m_maxargs(maxargs) {\n" +
+    "    scopeparams(const std::initializer_list<std::string> &list, int maxargs): m_maxargs(maxargs) {\n" +
     "        saveargs(m_vec, maxargs);\n" +
     "        processargs(list, maxargs);\n" +
     "    }\n" +
@@ -3570,13 +3570,13 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             "    ~scopedvariable(){setenv(m_env.c_str(), m_backup.c_str(), 1);}\n" +
             "};\n\
         template <typename F>\n\
-        std::string execinternal(F f)\n\
+        const std::string execinternal(F f)\n\
         {\n\
             scopeexitcout scope(false);\n\
             f({});\n\
             return scope.buf().str();\n\
         }\n\
-        std::string execbuiltin(void (*f)(const std::string_view &arg), const std::string_view &arg)\n\
+        const std::string execbuiltin(void (*f)(const std::string_view &arg), const std::string_view &arg)\n\
         {\n\
             scopeexitcout scope(false);\n\
             f(arg);\n\
@@ -3589,25 +3589,25 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             return exitstatus == 0; \n\
         }\n"
 
-        let upperstr = "std::string upper(const std::string_view &str)\n" +
+        let upperstr = "const std::string upper(const std::string_view &str)\n" +
         "{\n" +
         "    std::string s(str);\n" +
         "    std::transform(s.begin(), s.end(), s.begin(), ::toupper);\n" +
         "    return s;\n" +
         "}\n"
-        let lowerstr = "std::string lower(const std::string_view &str)\n" +
+        let lowerstr = "const std::string lower(const std::string_view &str)\n" +
         "{\n" +
         "    std::string s(str);\n" +
         "    std::transform(s.begin(), s.end(), s.begin(), ::tolower);\n" +
         "    return s;\n" +
         "}\n"
-        let uppercapitalize = "std::string uppercapitalize(const std::string_view &str)\n" +
+        let uppercapitalize = "const std::string uppercapitalize(const std::string_view &str)\n" +
         "{\n" +
         "    std::string s(str);\n" +
         "    s[0] = toupper(s[0]);\n" +
         "    return s;\n" +
         "}\n"
-        let lowercapitalize = "std::string lowercapitalize(const std::string_view &str)\n" +
+        let lowercapitalize = "const std::string lowercapitalize(const std::string_view &str)\n" +
         "{\n" +
         "    std::string s(str);\n" +
         "    s[0] = tolower(s[0]);\n" +
