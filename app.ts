@@ -2716,10 +2716,12 @@ class ConvertBash {
             if (file == \"\") return true; \n\
                 return (stat(file.data(), &buf) == 0);        \n\
         }\n\
-        std::ifstream::pos_type filesize(const char* filename)\n\
+        off_t filesize(const char* filename)\n\
         {\n\
-            std::ifstream in (filename, std::ifstream::ate | std::ifstream::binary);\n\
-            return in.tellg();\n\
+			struct stat st;\n\
+			if (stat(filename, &st)) return 0;\n\
+			off_t size = st.st_size;\n\
+            return size;\n\
         }\n\
         const int fileexists_sizenonzero(const std::string_view &file) {\n\
             if (fileexists(file)){        \n\
