@@ -2841,17 +2841,24 @@ class ConvertBash {
         }\n\
         \n\
         const std::string_view set_env(const char *cmd, const float value) { \n\
-            setenv(cmd, std::to_string(value).c_str(), 1);\n\
+            char c[64];\n\
+            sprintf(c, \"%f\", value);\n\
+            setenv(cmd, c, 1);\n\
             return \"\";\n\
         }\n\
         \n\
         const std::string_view set_env(const char *cmd, const int value) { \n\
-            setenv(cmd, std::to_string(value).c_str(), 1);\n\
+            char c[64];\n\
+            sprintf(c, \"%d\", value);\n\
+            setenv(cmd, c, 1);\n\
             return \"\";\n\
         }\n\
         \n\
         void set_env(const char *cmd, const char value) { \n\
-            setenv(cmd, std::to_string(value).c_str(), 1);\n\
+            char c[2];\n\
+            c[0] = value;\n\
+            c[1] = 0;\n\
+            setenv(cmd, c, 1);\n\
         }\n\
         const std::string set_env_ifunset(const char *cmd, const std::string_view &value) {\n\
         \n\
