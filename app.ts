@@ -35,7 +35,7 @@ class ConvertBash {
         }
         let val = ""
         if (asenv)
-            val = "get_env(\"" + str + "\")"
+            val = "get_env(\"" + str + "\").c_str()"
         else
             val = str
         return val
