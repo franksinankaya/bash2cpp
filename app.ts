@@ -3679,7 +3679,11 @@ try {
 
     let argstr = "void convertMainArgs(int argc, const char *argv[], int maxargs){\n"
     argstr += "char str[50];\n"
-    argstr += "if (argc > 1) setenv(\"#\", std::to_string(argc - 1).c_str(), 1);\n"
+    argstr += "\n"
+    argstr += "if (argc > 1) {\n"
+    argstr += "    sprintf(str, \"%d\", argc - 1);\n"
+    argstr += "    setenv(\"#\", str, 1);\n"
+    argstr += "}\n"
     argstr += "else  setenv(\"#\", \"0\", 1);\n"
     argstr += "std::string combinedargs;\n"
     argstr += "setenv(\"0\", argv[0], 1);\n"
