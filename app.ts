@@ -3078,16 +3078,16 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         {\n\
             // Vector of string to save tokens  \n\
             size_t pos = 0; \n\
-            std::string delimiter = \"\\n\";\n\
+            std::string delimiter(\"\\n\");\n\
             size_t prev = 0; \n\
             if (str.front() == '\\\'') prev++;\n\
                                                 \n\
             while ((pos = str.find_first_of(delimiter, prev)) != std::string::npos) {\n\
-                std::string v = str.substr(prev, pos-prev);\n\
+                std::string v(str.substr(prev, pos-prev));\n\
                 size_t offset = v.find(\"=\");\n\
                 if (offset != std::string::npos) {;\n\
-                    std::string key = v.substr(0, offset);\n\
-                    std::string value = v.substr(offset + 1);\n\
+                    std::string key(v.substr(0, offset));\n\
+                    std::string value(v.substr(offset + 1));\n\
                     if ((key != \"#\") && (value != \"\")) \n\
                         setenv(key.c_str(), value.c_str(), 1);\n\
                 }\n\
@@ -3096,11 +3096,11 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             if (prev < str.length()){\n\
                 size_t end = str.length() - prev;\n\
                 if (str.back() == '\\\'') end--;\n\
-                std::string v = str.substr(prev, end);\n\
+                std::string v(str.substr(prev, end));\n\
                 size_t offset = v.find(\"=\");\n\
                 if (offset != std::string::npos) {;\n\
-                    std::string key = v.substr(0, offset);\n\
-                    std::string value = v.substr(offset + 1);\n\
+                    std::string key(v.substr(0, offset));\n\
+                    std::string value(v.substr(offset + 1));\n\
                     if ((key != \"#\") && (value != \"\")) \n\
                         setenv(key.c_str(), value.c_str(), 1);\n\
                 }\n\
@@ -3127,7 +3127,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         }\n\
         \n\
         const std::vector <std::string> split(const std::string_view &s, bool ifs = true) {\n\
-            std::string delim = \" \\t\\n\"; \n\
+            std::string delim(\" \\t\\n\"); \n\
             std::vector <std::string> elems;\n\
             const char *userdelim = getenv(\"IFS\");\n\
             if ((userdelim != NULL) && ifs)\n\
@@ -3140,7 +3140,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             return elems;\n\
         }\n\
         void split(std::vector <std::string> &elems, const std::string_view &s, bool ifs= true) {\n\
-            std::string delim = \" \\t\\n\"; \n\
+            std::string delim(\" \\t\\n\"); \n\
             const char *userdelim = getenv(\"IFS\");\n\
             if ((userdelim != NULL) && ifs)\n\
             {\n\
@@ -3304,9 +3304,9 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             boost::format fmt(toks[0]);\n\
             toks.erase(toks.begin());\n\
             std::stringstream outstr;\n\
-            std::string strval = format_vector(fmt, toks).str();\n\
+            std::string strval(format_vector(fmt, toks).str());\n\
             std::vector <std::string> tokens;\n\
-            std::string delim = \"\\\\n\"; \n\
+            std::string delim(\"\\\\n\"); \n\
             split(tokens, strval, delim);\n\
             for (auto &a : tokens)\n\
                 std::cout << a << std::endl;\n\
@@ -3626,7 +3626,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         "{\n"  +
             "int exitstatus;\n" +
             "std::string result;\n" +
-            "std::string cmd = \"set -a && . \" + fname + \" && set +a && env\";\n" +
+            "std::string cmd(\"set -a && . \" + fname + \" && set +a && env\");\n" +
             "std::vector<char *> toks{(char*)\"sh\", (char*)\"-c\", cmd.data(), (char*)NULL};\n" +
             "char nChar;\n" +
             "int outfd[2];\n" +
