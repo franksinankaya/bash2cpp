@@ -35,7 +35,7 @@ class ConvertBash {
         }
         let val = ""
         if (asenv)
-            val = "getenv(\"" + str + "\")"
+            val = "get_env(\"" + str + "\")"
         else
             val = str
         return val
@@ -1622,7 +1622,7 @@ class ConvertBash {
         {
             vector = true
             text += "std::vector<std::string> vals; \n"
-            text += "regexsplit(vals, getenv(\"@\"));\n"
+            text += "regexsplit(vals, get_env(\"@\"));\n"
             countstr = "int length = vals.size();\n"
         }
         else {
@@ -2019,7 +2019,7 @@ class ConvertBash {
                 return "continue"
             case 'return':
                 {
-                    const retval = suffixprocessed ? "std::string(" + suffixprocessed + ")" : "getenv(\"?\")"
+                    const retval = suffixprocessed ? "std::string(" + suffixprocessed + ")" : "get_env(\"?\")"
                     return "return " + retval
                 }
             case 'set':
@@ -3403,7 +3403,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         text += "    list.reserve(maxargs);\n"
         text += "    for (int i = 0; i < maxargs; i++) {\n"
         text += "        sprintf(str, \"%d\", i + 1);\n"
-        text += "        list.emplace_back(getenv(str));\n"
+        text += "        list.emplace_back(get_env(str));\n"
         text += "    }\n"
         text += "}\n"
         text += "void processargs(const std::initializer_list<std::string> &list, int maxargs)\n"
