@@ -3321,12 +3321,12 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         }\n\
         \n\
         void echo(const float value) {\n\
-            std::cout << std::to_string(value).c_str() << std::endl; \n\
+            std::cout << value << std::endl; \n\
             set_env(\"?\", 0);\n\
         }\n\
         \n\
         void echo(const int value) {\n\
-            std::cout << std::to_string(value).c_str() << std::endl; \n\
+            std::cout << value << std::endl; \n\
             set_env(\"?\", 0);\n\
         }\n"
 
@@ -3391,15 +3391,19 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         let text = ""
         text += "void restoreargs(const std::vector<std::string> &list, int maxargs)\n"
         text += "{\n"
+        text += "    char str[50];\n"
         text += "    for (int i = 0; i < maxargs; i++) {\n"
-        text += "        setenv(std::to_string(i + 1).c_str(), list[i].c_str(), 1);\n"
+        text += "        sprintf(str, \"%d\", i + 1);\n"
+        text += "        setenv(str, list[i].c_str(), 1);\n"
         text += "    }\n"
         text += "}\n"
         text += "void saveargs(std::vector<std::string> &list, int maxargs)\n"
         text += "{\n"
+        text += "    char str[50];\n"
         text += "    list.reserve(maxargs);\n"
         text += "    for (int i = 0; i < maxargs; i++) {\n"
-        text += "        list.emplace_back(getenv(std::to_string(i + 1).c_str()));\n"
+        text += "        sprintf(str, \"%d\", i + 1);\n"
+        text += "        list.emplace_back(getenv(str));\n"
         text += "    }\n"
         text += "}\n"
         text += "void processargs(const std::initializer_list<std::string> &list, int maxargs)\n"
@@ -3408,15 +3412,18 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         text += "    std::string combinedargs;\n"
         text += "    int listsize = list.size();\n"
         text += "    set_env(\"#\", listsize);\n"
+        text += "    char str[50];\n"
         text += "    for (auto elem : list )\n"
         text += "    {\n"
-        text += "        setenv(std::to_string(i + 1).c_str(), elem.c_str(), 1);\n"
+        text += "        sprintf(str, \"%d\", i + 1);\n"
+        text += "        setenv(str, elem.c_str(), 1);\n"
         text += "        combinedargs += elem;\n"
         text += "        if (i != (listsize - 1)) combinedargs += \" \";\n"
         text += "        i++;\n"
         text += "    }\n"
         text += "    for (int i = listsize + 1; i < (maxargs + 1); i++) {\n"
-        text += "        setenv(std::to_string(i).c_str(), \" \", 1);\n"
+        text += "        sprintf(str, \"%d\", i);\n"
+        text += "        setenv(str, \" \", 1);\n"
         text += "    }\n"
         text += "    if (combinedargs.length() == 0) combinedargs = \" \";\n"
         text += "        set_env(\"@\", combinedargs);\n"
@@ -3671,19 +3678,22 @@ try {
     maxargs = converter.maxReferredArgs(ast, maxargs)
 
     let argstr = "void convertMainArgs(int argc, const char *argv[], int maxargs){\n"
+    argstr += "char str[50];\n"
     argstr += "if (argc > 1) setenv(\"#\", std::to_string(argc - 1).c_str(), 1);\n"
     argstr += "else  setenv(\"#\", \"0\", 1);\n"
     argstr += "std::string combinedargs;\n"
     argstr += "setenv(\"0\", argv[0], 1);\n"
     argstr += "for (int i = 1; i < argc; i++) {\n"
-    argstr += "setenv(std::to_string(i).c_str(), argv[i], 1);\n"
-    argstr += "combinedargs += argv[i];\n"
-    argstr += "if (i != (argc - 1)) combinedargs += \" \";\n"
+    argstr += "    sprintf(str, \"%d\", i);\n"
+    argstr += "    setenv(str, argv[i], 1);\n"
+    argstr += "    combinedargs += argv[i];\n"
+    argstr += "    if (i != (argc - 1)) combinedargs += \" \";\n"
     argstr += "}\n"
     argstr += "if (combinedargs.length() == 0) combinedargs = \" \";\n"
     argstr += "setenv(\"@\", combinedargs.c_str(), 1);\n"
     argstr += "for (int i = argc; i < (maxargs + 1); i++) {\n"
-    argstr += "setenv(std::to_string(i).c_str(), \" \", 1);\n"
+    argstr += "    sprintf(str, \"%d\", i);\n"
+    argstr += "    setenv(str, \" \", 1);\n"
     argstr += "}\n"
     argstr += "}\n"
 
