@@ -2963,9 +2963,9 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             while (read(outfd[0], &nChar, 1) == 1) {\n\
                 ioctl(outfd[0], FIONREAD, &available);\n\
                 if (resultcollect) {\n\
-					result += nChar;\n\
-                    result.resize(available + 1);\n\
-					if (read(outfd[0], &result[1], available) < 0) {\n\
+                    if (available) result.resize(available + 1);\n\
+					result[0] = nChar;\n\
+					if (available && read(outfd[0], &result[1], available) < 0) {\n\
 						fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
 						exit(-1);\n\
 					}\n\
