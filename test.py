@@ -17,6 +17,8 @@ def get_params():
                         help="enable profiling")
     parser.add_argument("-n", '--repeattests', type=int,
                         help='repeat test')
+    parser.add_argument("-t", '--tcmalloc', action='store_true',
+                        help='use tcmalloc library for heap operations')
     parser.add_argument('vars', nargs='*')
     params, unknown = parser.parse_known_args()
     return params, unknown 
@@ -29,12 +31,16 @@ if unknown is not None:
 
 repeat=0
 profile=0
+tcmalloc=0
 runmeasuretestonly=0
 runbuildtestonly=0
 opt="-O3"
 
 if params.repeattests:
     repeat=params.repeattests
+
+if params.tcmalloc:
+    tcmalloc=params.tcmalloc
 
 if params.enableprofiling:
     profile=params.enableprofiling
@@ -244,6 +250,8 @@ def buildtest(testname=''):
         cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto  -lpcre -lpthread -std=c++17"
         if profile:
             cmd1 += " -pg"
+        if tcmalloc:
+            cmd1 += " -ltcmalloc "
         list=convertlist(cmd1)
         out0, result, err = execcommand(list)
         if result!=0:
@@ -260,6 +268,8 @@ def buildandexectestone(i):
         cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -lpcre -lpthread -std=c++17"
         if profile:
             cmd1 += " -pg"
+        if tcmalloc:
+            cmd1 += " -ltcmalloc "
         list=convertlist(cmd1)
         out0, result, err = execcommand(list)
         if result!=0:
