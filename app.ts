@@ -2874,7 +2874,7 @@ class ConvertBash {
         }\n"
 
         const execCommand = "\n\
-int createChild(int *outfd, std::vector<char *> &aArguments) {\n\
+int createChild(int *outfd, char ** aArguments) {\n\
     int aStdinPipe[2];\n\
     int aStdoutPipe[2];\n\
     int nChild;\n\
@@ -2953,7 +2953,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         toks.emplace_back(w[i]);\n\
     }\n\
     toks.push_back(NULL);\n\
-    exitstatus = createChild(outfd, toks);\n\
+    exitstatus = createChild(outfd, &toks[0]);\n\
     wordfree(&p);\n\
 }\n\
         \n\
@@ -3637,7 +3637,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             "int exitstatus;\n" +
             "std::string result;\n" +
             "std::string cmd(\"set -a && . \" + fname + \" && set +a && env\");\n" +
-            "std::vector<char *> toks{(char*)\"sh\", (char*)\"-c\", cmd.data(), (char*)NULL};\n" +
+            "char *toks[4] = {(char*)\"sh\", (char*)\"-c\", cmd.data(), (char*)NULL};\n" +
             "char nChar;\n" +
             "int outfd[2];\n" +
             "if (pipe(outfd) < 0) {\n\
@@ -3645,7 +3645,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
                     exit(-1);\n\
                 }\n" +
             "bool stdout = false;\n bool resultcollect = true;\n" +
-            "exitstatus = createChild(outfd, toks); \n" +
+            "exitstatus = createChild(outfd, &toks[0]); \n" +
             "writetoout(outfd, result, stdout, resultcollect);\n" +
             "splitenvs(result);\n" +
         "}\n"
