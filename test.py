@@ -13,12 +13,14 @@ def get_params():
                         help="run build tests only")
     parser.add_argument("-O0", "--reduceoptimization", action='store_true',
                         help="reduce optimization level")
-    parser.add_argument("-p", "--enableprofiling", action='store_true',
+    parser.add_argument("-gp", "--enablegnuprofiling", action='store_true',
                         help="enable profiling")
     parser.add_argument("-n", '--repeattests', type=int,
                         help='repeat test')
     parser.add_argument("-t", '--tcmalloc', action='store_true',
                         help='use tcmalloc library for heap operations')
+    parser.add_argument("-pr", '--enablegperfprofiling', action='store_true',
+                        help='use tcmalloc profiler for heap operations')
     parser.add_argument('vars', nargs='*')
     params, unknown = parser.parse_known_args()
     return params, unknown 
@@ -30,8 +32,9 @@ if unknown is not None:
         vars.append(u)
 
 repeat=0
-profile=0
+gnuprofile=0
 tcmalloc=0
+gperfprofile=0
 runmeasuretestonly=0
 runbuildtestonly=0
 opt="-O3"
@@ -42,8 +45,11 @@ if params.repeattests:
 if params.tcmalloc:
     tcmalloc=params.tcmalloc
 
-if params.enableprofiling:
-    profile=params.enableprofiling
+if params.enablegnuprofiling:
+    gnuprofile=params.enablegnuprofiling
+
+if params.enablegperfprofiling:
+    gperfprofile=params.enablegperfprofiling
 
 if params.reduceoptimization:
     opt="-O0 -g"
@@ -248,10 +254,13 @@ def buildtest(testname=''):
             print(err)
             sys.exit(result)
         cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto  -lpcre -lpthread -std=c++17"
-        if profile:
+        if gnuprofile:
             cmd1 += " -pg"
         if tcmalloc:
             cmd1 += " -ltcmalloc "
+        if gperfprofile:
+            cmd1 += " -lprofiler "
+
         list=convertlist(cmd1)
         out0, result, err = execcommand(list)
         if result!=0:
@@ -266,10 +275,13 @@ def buildandexectestone(i):
         if result!=0:
             sys.exit(result)
         cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -lpcre -lpthread -std=c++17"
-        if profile:
+        if gnuprofile:
             cmd1 += " -pg"
         if tcmalloc:
             cmd1 += " -ltcmalloc "
+        if gperfprofile:
+            cmd1 += " -lprofiler "
+
         list=convertlist(cmd1)
         out0, result, err = execcommand(list)
         if result!=0:
