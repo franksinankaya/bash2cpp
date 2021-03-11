@@ -2937,7 +2937,6 @@ int createChild(int *outfd, char ** aArguments) {\n\
 \n\
 void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
 {\n\
-    std::vector<char *> toks;\n\
     wordexp_t p;\n\
     char **w;\n\
     int ret;\n\
@@ -2948,12 +2947,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         exit(-1);\n\
      };\n\
     w = p.we_wordv;\n\
-    toks.reserve(p.we_wordc);\n\
-    for (int i = 0; i < p.we_wordc; i++) {\n\
-        toks.emplace_back(w[i]);\n\
-    }\n\
-    toks.push_back(NULL);\n\
-    exitstatus = createChild(outfd, &toks[0]);\n\
+    exitstatus = createChild(outfd, &w[0]);\n\
     wordfree(&p);\n\
 }\n\
         \n\
@@ -3078,31 +3072,32 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         {\n\
             // Vector of string to save tokens  \n\
             size_t pos = 0; \n\
-            std::string delimiter(\"\\n\");\n\
+            std::string_view delimiter(\"\\n\");\n\
             size_t prev = 0; \n\
             if (str.front() == '\\\'') prev++;\n\
-                                                \n\
+            std::string v;\n\
             while ((pos = str.find_first_of(delimiter, prev)) != std::string::npos) {\n\
-                std::string v(str.substr(prev, pos-prev));\n\
+                v.reserve(pos-prev);\n\
+                v = str.substr(prev, pos-prev);\n\
                 size_t offset = v.find(\"=\");\n\
                 if (offset != std::string::npos) {;\n\
-                    std::string key(v.substr(0, offset));\n\
-                    std::string value(v.substr(offset + 1));\n\
+                    std::string_view key(v.substr(0, offset));\n\
+                    std::string_view value(v.substr(offset + 1));\n\
                     if ((key != \"#\") && (value != \"\")) \n\
-                        setenv(key.c_str(), value.c_str(), 1);\n\
+                        setenv(key.data(), value.data(), 1);\n\
                 }\n\
                 prev = pos+1;\n\
             }\n\
             if (prev < str.length()){\n\
                 size_t end = str.length() - prev;\n\
                 if (str.back() == '\\\'') end--;\n\
-                std::string v(str.substr(prev, end));\n\
+                v = str.substr(prev, end);\n\
                 size_t offset = v.find(\"=\");\n\
                 if (offset != std::string::npos) {;\n\
-                    std::string key(v.substr(0, offset));\n\
-                    std::string value(v.substr(offset + 1));\n\
+                    std::string_view key(v.substr(0, offset));\n\
+                    std::string_view value(v.substr(offset + 1));\n\
                     if ((key != \"#\") && (value != \"\")) \n\
-                        setenv(key.c_str(), value.c_str(), 1);\n\
+                        setenv(key.data(), value.data(), 1);\n\
                 }\n\
             }\n\
         }\n\
@@ -3632,11 +3627,14 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         "    s[0] = tolower(s[0]);\n" +
         "    return s;\n" +
         "}\n"
-        let sourcefunc = "void source(const std::string &fname)\n" +
+        let sourcefunc = "void source(const std::string_view &fname)\n" +
         "{\n"  +
             "int exitstatus;\n" +
             "std::string result;\n" +
-            "std::string cmd(\"set -a && . \" + fname + \" && set +a && env\");\n" +
+            "std::string cmd(\"set -a && . \");\n" +
+            "cmd.reserve(cmd.size() + fname.size() + 19);\n" +
+            "cmd += fname;\n" +
+            "cmd += \" && set +a && env\";\n" +
             "char *toks[4] = {(char*)\"sh\", (char*)\"-c\", cmd.data(), (char*)NULL};\n" +
             "char nChar;\n" +
             "int outfd[2];\n" +
