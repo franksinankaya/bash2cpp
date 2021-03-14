@@ -3068,40 +3068,6 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         }\n"
 
         const splitCommand = "\n\
-        void splitenvs(const std::string &str)\n\
-        {\n\
-            // Vector of string to save tokens  \n\
-            size_t pos = 0; \n\
-            std::string_view delimiter(\"\\n\");\n\
-            size_t prev = 0; \n\
-            if (str.front() == '\\\'') prev++;\n\
-            std::string v;\n\
-            while ((pos = str.find_first_of(delimiter, prev)) != std::string::npos) {\n\
-                v.reserve(pos-prev);\n\
-                v = str.substr(prev, pos-prev);\n\
-                size_t offset = v.find(\"=\");\n\
-                if (offset != std::string::npos) {;\n\
-                    std::string_view key(v.substr(0, offset));\n\
-                    std::string_view value(v.substr(offset + 1));\n\
-                    if ((key != \"#\") && (value != \"\")) \n\
-                        setenv(key.data(), value.data(), 1);\n\
-                }\n\
-                prev = pos+1;\n\
-            }\n\
-            if (prev < str.length()){\n\
-                size_t end = str.length() - prev;\n\
-                if (str.back() == '\\\'') end--;\n\
-                v = str.substr(prev, end);\n\
-                size_t offset = v.find(\"=\");\n\
-                if (offset != std::string::npos) {;\n\
-                    std::string_view key(v.substr(0, offset));\n\
-                    std::string_view value(v.substr(offset + 1));\n\
-                    if ((key != \"#\") && (value != \"\")) \n\
-                        setenv(key.data(), value.data(), 1);\n\
-                }\n\
-            }\n\
-        }\n\
-        \n\
         void split(std::vector <std::string> &tokens, const std::string &str, std::string &delimiter)\n\
         {\n\
             // Vector of string to save tokens  \n\
@@ -3636,16 +3602,21 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             "cmd += fname;\n" +
             "cmd += \" && set +a && env\";\n" +
             "char *toks[4] = {(char*)\"sh\", (char*)\"-c\", cmd.data(), (char*)NULL};\n" +
-            "char nChar;\n" +
-            "int outfd[2];\n" +
-            "if (pipe(outfd) < 0) {\n\
-                    fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-                    exit(-1);\n\
+            "boost::process::ipstream pipe_stream;\n" +
+            "cmd = \"sh -c \\\"\" + cmd + \"\\\"\";\n" +
+            "boost::process::child c(cmd, boost::process::std_out > pipe_stream);\n" +
+            "std::string line;\n" +
+            "while (pipe_stream && std::getline(pipe_stream, line) && !line.empty()) {\n" +
+            "   size_t offset = line.find(\"=\");\n\
+                if (line[0] == '#') continue;\n\
+                if (offset != std::string::npos) {;\n\
+                    std::string_view key(line.substr(0, offset));\n\
+                    std::string_view value(line.substr(offset + 1));\n\
+                    if (!value.empty()) \n\
+                        setenv(key.data(), value.data(), 1);\n\
                 }\n" +
-            "bool stdout = false;\n bool resultcollect = true;\n" +
-            "exitstatus = createChild(outfd, &toks[0]); \n" +
-            "writetoout(outfd, result, stdout, resultcollect);\n" +
-            "splitenvs(result);\n" +
+            "};\n" +
+            "c.wait();\n" +
         "}\n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
             + charfileexists + filereadable + fileexecutable + filewritable + direxists + envCommand + execCommand + splitCommand + regexstr + echostr
@@ -3715,6 +3686,7 @@ try {
         "#include <memory>\n" +
         "#include <sys/ioctl.h>\n" +
         "#include <boost/format.hpp>\n" +
+        "#include <boost/process.hpp>\n" +
         "#include <iostream>\n" +
         "#include <regex>\n" +
         "#include <iterator>\n" +

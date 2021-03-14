@@ -253,7 +253,7 @@ def buildtest(testname=''):
             print(out)
             print(err)
             sys.exit(result)
-        cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto  -lpcre -lpthread -std=c++17"
+        cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto  -lpcre -lpthread -lboost_system -std=c++17"
         if gnuprofile:
             cmd1 += " -pg"
         if tcmalloc:
@@ -274,7 +274,7 @@ def buildandexectestone(i):
         out, result, err = execcommand(list)
         if result!=0:
             sys.exit(result)
-        cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -lpcre -lpthread -std=c++17"
+        cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -lpcre -lpthread -lboost_system -std=c++17"
         if gnuprofile:
             cmd1 += " -pg"
         if tcmalloc:
