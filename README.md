@@ -127,8 +127,6 @@ Review missing functionality list.
 * variable.sh: dropping TIMESTAMP variables
 * functions: parameter expansion inside awk string does not work
 * if [[ ( $username == "admin" && $password == "secret" ) ]] does not work
-* nested pipes over 2 level not supported
-* . /etc/default/rcS
 * if [ -z ${VAR+x} ]; 
 * dmesg -s 131072 > gen/dmesg  doesn't work
 * echo {A..Z}{0..9} does not work
