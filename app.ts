@@ -2863,69 +2863,14 @@ class ConvertBash {
         }\n"
 
         const execCommand = "\n\
-int createChild(int *outfd, char ** aArguments) {\n\
-    int aStdinPipe[2];\n\
-    int aStdoutPipe[2];\n\
-    int nChild;\n\
-    char nChar;\n\
-    int nResult;\n\
-\n\
-    if (pipe(aStdinPipe) < 0) {\n\
-        fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-        exit(-1);\n\
-    }\n\
-    if (pipe(aStdoutPipe) < 0) {\n\
-        close(aStdinPipe[PIPE_READ]);\n\
-        close(aStdinPipe[PIPE_WRITE]);\n\
-        fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-        exit(-1);\n\
-    }\n\
-\n\
-    nChild = fork();\n\
-    if (0 == nChild) {\n\
-        close(outfd[0]);\n\
-        if (dup2(outfd[1], STDOUT_FILENO) == -1) {\n\
-            fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-            exit(errno);\n\
-        }\n\
-\n\
-        if (dup2(outfd[1], STDERR_FILENO) == -1) {\n\
-            fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-            exit(errno);\n\
-        }\n\
-\n\
-        close(aStdinPipe[PIPE_READ]);\n\
-        close(aStdinPipe[PIPE_WRITE]);\n\
-        close(aStdoutPipe[PIPE_READ]);\n\
-        close(aStdoutPipe[PIPE_WRITE]);\n\
-\n\
-        nResult = execvpe(aArguments[0], &aArguments[0], environ);\n\
-\n\
-        exit(nResult);\n\
-    } else if (nChild > 0) {\n\
-        close(outfd[1]);\n\
-        close(aStdinPipe[PIPE_READ]);\n\
-        close(aStdoutPipe[PIPE_WRITE]);\n\
-        close(aStdinPipe[PIPE_WRITE]);\n\
-        close(aStdoutPipe[PIPE_READ]);\n\
-\n\
-        int rc;\n\
-        if (waitpid(nChild, &rc, 0) != -1) {\n\
-            if (WIFEXITED(rc)) {\n\
-                nChild = WEXITSTATUS(rc);\n\
-            }\n\
-        }\n\
-    } else {\n\
-        close(aStdinPipe[PIPE_READ]);\n\
-        close(aStdinPipe[PIPE_WRITE]);\n\
-        close(aStdoutPipe[PIPE_READ]);\n\
-        close(aStdoutPipe[PIPE_WRITE]);\n\
-    }\n\
-    return nChild;\n\
-}\n\
-\n\
-void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
+void execcommand(boost::process::ipstream &out, boost::process::ipstream &err, boost::process::opstream &in, const std::string_view &cmd, int & exitstatus) \n\
 {\n\
+	if (std::cin.rdbuf()->in_avail()) {\n\
+		std::ostringstream ss;\n\
+		ss << std::cin.rdbuf();\n\
+		std::string str = ss.str();\n\
+		in.write(str.c_str(), str.size());\n\
+	}\n\
     wordexp_t p;\n\
     char **w;\n\
     int ret;\n\
@@ -2936,61 +2881,42 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         exit(-1);\n\
      };\n\
     w = p.we_wordv;\n\
-    exitstatus = createChild(outfd, &w[0]);\n\
+    std::string Cmd;\n\
+    for (int i=0; i < p.we_wordc; i++) {\n\
+        Cmd += p.we_wordv[i];\n\
+        if (i != (p.we_wordc - 1)) Cmd += std::string(\" \");\n\
+    }\n\
+    namespace  bp = boost::process;\n\
+    bp::child c(Cmd.c_str(), bp::std_out > out, bp::std_err > err, bp::std_in < in);\n\
+    in.pipe().close();\n\
+    c.wait();\n\
+    exitstatus = c.exit_code();\n\
     wordfree(&p);\n\
 }\n\
         \n\
-        const void writetoout(int *outfd, std::string &result, bool stdout, bool resultcollect) { \n\
+        const void writetoout(boost::process::ipstream &out, boost::process::ipstream &err, std::string &result, bool stdout, bool resultcollect) { \n\
             char nChar;\n\
             size_t available = 0;\n\
-            if (read(outfd[0], &nChar, 1) == 1) {\n\
-                ioctl(outfd[0], FIONREAD, &available);\n\
-                if (resultcollect) {\n\
-                    if (available) result.resize(available + 1);\n\
-					result[0] = nChar;\n\
-					if (available && read(outfd[0], &result[1], available) < 0) {\n\
-						fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-						exit(-1);\n\
-					}\n\
-                    if (stdout) std::cout << result; \n\
-                }\n\
-                else if (stdout) {\n\
-                    const int bufsize = 4096;\n\
-                    char databuf[bufsize + 1];\n\
-                    databuf[bufsize] = 0;\n\
-					if (stdout)\n\
-						std::cout << nChar;\n\
-					\n\
-					int count = available / bufsize;\n\
-                    while (count) {\n\
-                        if (read(outfd[0], &databuf[0], bufsize) < 0) break;\n\
-                        std::cout << databuf;\n\
-                        count--;\n\
-                    }\n\
-					int remaining = (available % bufsize);\n\
-					if (remaining) {\n\
-						if (read(outfd[0], &databuf[0], remaining) > 0) {\n\
-						databuf[remaining] = 0;\n\
-						if (stdout)\n\
-							std::cout << databuf;\n\
-						}\n\
-					}\n\
-                }\n\
+            std::string line;\n\
+            while (out && std::getline(out, line) && !line.empty()) {\n\
+                if (stdout) std::cout << line << std::endl;\n\
+                if (resultcollect) result += line + '\\n';\n\
             }\n\
-            close(outfd[0]); \n\
+            while (err && std::getline(err, line) && !line.empty()) {\n\
+                if (stdout) std::cout << line << std::endl;\n\
+                if (resultcollect) result += line + '\\n';\n\
+            }\n\
+            return;\n\
         } \n\
         const int checkexec(const std::string_view &cmd) { \n\
             int exitstatus; \n\
             if (!cmd.empty()) {\n\
                 std::string result;\n\
-                int outfd[2];\n\
-                if (pipe(outfd) < 0) {\n\
-                    fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-                    exit(-1);\n\
-                }\n\
                 bool stdout = true;\n bool resultcollect = false;\n\
-                execcommand(outfd, cmd, exitstatus);\n\
-                writetoout(outfd, result, stdout, resultcollect);\n\
+                boost::process::ipstream out, err;\n\
+                boost::process::opstream in;\n\
+                execcommand(out, err, in, cmd, exitstatus);\n\
+                writetoout(out, err, result, stdout, resultcollect);\n\
                 set_env(\"?\", exitstatus);\n\
             } else {\n\
                 exitstatus = mystoiz(getenv(\"?\"));\n\
@@ -3016,13 +2942,10 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             int exitstatus; \n\
             std::string result;\n\
             char nChar;\n\
-            int outfd[2];\n\
-            if (pipe(outfd) < 0) {\n\
-                fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-                exit(-1);\n\
-            }\n\
-            execcommand(outfd, cmd, exitstatus);\n\
-            writetoout(outfd, result, stdout, resultcollect);\n\
+			boost::process::ipstream out, err;\n\
+			boost::process::opstream in;\n\
+			execcommand(out, err, in, cmd, exitstatus);\n\
+            writetoout(out, err, result, stdout, resultcollect);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
         }\n\
@@ -3031,14 +2954,11 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             int exitstatus; \n\
             std::string result;\n\
             char nChar;\n\
-            int outfd[2];\n\
-            if (pipe(outfd) < 0) {\n\
-                fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-                exit(-1);\n\
-            }\n\
             bool stdout = true;\n bool resultcollect = false;\n\
-            execcommand(outfd, cmd, exitstatus);\n\
-            writetoout(outfd, result, stdout, resultcollect);\n\
+			boost::process::ipstream out, err;\n\
+			boost::process::opstream in;\n\
+			execcommand(out, err, in, cmd, exitstatus);\n\
+            writetoout(out, err, result, stdout, resultcollect);\n\
             set_env(\"?\", exitstatus);\n\
         }\n\
         \n\
@@ -3046,14 +2966,11 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             int exitstatus; \n\
             std::string result; \n\
             char nChar;\n\
-            int outfd[2];\n\
-            if (pipe(outfd) < 0) {\n\
-                fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-                exit(-1);\n\
-            }\n\
             bool stdout = false;\n\
-            execcommand(outfd, cmd, exitstatus);\n\
-            writetoout(outfd, result, stdout, resultcollect);\n\
+			boost::process::ipstream out, err;\n\
+			boost::process::opstream in;\n\
+			execcommand(out, err, in, cmd, exitstatus);\n\
+            writetoout(out, err, result, stdout, resultcollect);\n\
             set_env(\"?\", exitstatus);\n\
             return result; \n\
         }\n"
@@ -3437,8 +3354,6 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
     std::streambuf *backupout = std::cout.rdbuf();\n\
 	std::streambuf *backupin = std::cin.rdbuf();\n\
 	std::stringstream buffer;\n\
-	int readfd[2];\n\
-	int m_inbackup;\n\
 	bool m_released = false;\n\
 \n\
 	public: \n\
@@ -3448,13 +3363,6 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
 	}\n\
 	scopeexitcincout(bool stdout = false) {\n\
 		if (!stdout) std::cout.rdbuf(buffer.rdbuf());\n\
-        if (pipe(readfd) < 0) {\n\
-            fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-            exit(-1);\n\
-        }\n\
-		m_inbackup = dup(0);\n\
-		dup2(readfd[0], STDIN_FILENO); \n\
-		close(readfd[0]);\n\
 	}\n\
 \n\
 	std::stringstream &buf() { return buffer;}\n\
@@ -3464,17 +3372,11 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
 \n\
 		std::cout.rdbuf(backupout);\n\
 		std::cin.rdbuf(backupin);\n\
-		dup2(m_inbackup, 0); \n\
-		close(m_inbackup); \n\
 		m_released = true;\n\
 	}\n\
 \n\
 	void writecin(std::stringstream &str) {\n\
-		if (write(readfd[1], str.str().data(), str.str().length()) < 0) {\n\
-			fprintf( stderr,\"%s:%d\\n\", __func__, __LINE__);\n\
-			exit(-1);\n\
-		}\n\
-		close(readfd[1]);\n\
+		std::cin.rdbuf(str.rdbuf());\n\
 	}\n\
 };\n\
 " +
