@@ -2954,7 +2954,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
         const void writetoout(int *outfd, std::string &result, bool stdout, bool resultcollect) { \n\
             char nChar;\n\
             size_t available = 0;\n\
-            while (read(outfd[0], &nChar, 1) == 1) {\n\
+            if (read(outfd[0], &nChar, 1) == 1) {\n\
                 ioctl(outfd[0], FIONREAD, &available);\n\
                 if (resultcollect) {\n\
                     if (available) result.resize(available + 1);\n\
@@ -2972,14 +2972,16 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
 					if (stdout)\n\
 						std::cout << nChar;\n\
 					\n\
-                    while (available / bufsize) {\n\
+					int count = available / bufsize;\n\
+                    while (count) {\n\
                         if (read(outfd[0], &databuf[0], bufsize) < 0) break;\n\
                         std::cout << databuf;\n\
-                        available -= bufsize;\n\
+                        count--;\n\
                     }\n\
-					if (available % bufsize) {\n\
-						if (read(outfd[0], &databuf[0], available % bufsize) > 0) {\n\
-						databuf[available % bufsize] = 0;\n\
+					int remaining = (available % bufsize);\n\
+					if (remaining) {\n\
+						if (read(outfd[0], &databuf[0], remaining) > 0) {\n\
+						databuf[remaining] = 0;\n\
 						if (stdout)\n\
 							std::cout << databuf;\n\
 						}\n\
