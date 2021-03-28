@@ -19,6 +19,8 @@ def get_params():
                         help='repeat test')
     parser.add_argument("-t", '--tcmalloc', action='store_true',
                         help='use tcmalloc library for heap operations')
+    parser.add_argument("-c", '--clang', action='store_true',
+                        help='use clang compiler')
     parser.add_argument("-pr", '--enablegperfprofiling', action='store_true',
                         help='use tcmalloc profiler for heap operations')
     parser.add_argument('vars', nargs='*')
@@ -33,6 +35,7 @@ if unknown is not None:
 
 repeat=0
 gnuprofile=0
+clang=0
 tcmalloc=0
 gperfprofile=0
 runmeasuretestonly=0
@@ -44,6 +47,9 @@ if params.repeattests:
 
 if params.tcmalloc:
     tcmalloc=params.tcmalloc
+
+if params.clang:
+    clang=params.clang
 
 if params.enablegnuprofiling:
     gnuprofile=params.enablegnuprofiling
@@ -253,7 +259,12 @@ def buildtest(testname=''):
             print(out)
             print(err)
             sys.exit(result)
-        cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto  -lpcre -lpthread -lboost_system -std=c++17"
+        cmd1="gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto  -lpcre -lpthread -lboost_system -std=c++17"
+        if clang:
+            cmd1 = "clang++ " + cmd1
+        else:
+            cmd1 = "g++ " + cmd1
+
         if gnuprofile:
             cmd1 += " -pg"
         if tcmalloc:
@@ -274,7 +285,11 @@ def buildandexectestone(i):
         out, result, err = execcommand(list)
         if result!=0:
             sys.exit(result)
-        cmd1="g++ gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -lpcre -lpthread -lboost_system -std=c++17"
+        cmd1="gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -lpcre -lpthread -lboost_system -std=c++17"
+        if clang:
+            cmd1 = "clang++ " + cmd1
+        else:
+            cmd1 = "g++ " + cmd1
         if gnuprofile:
             cmd1 += " -pg"
         if tcmalloc:
