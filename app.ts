@@ -859,7 +859,7 @@ class ConvertBash {
         if (name[0] == '"' && name[name.length - 1] == '"') {
             name = name.substring(1, name.length - 2)
         }
-        text += "const std::string " + name + "(const std::initializer_list<std::string> list) {\n"
+        text += "const std::string " + name + "(const std::initializer_list<std::string> &list) {\n"
         text += "scopeparams prms" + name + "(list, " + parseInt(maxargs) + ");\n"
         text += "scopeexitcout scope(true);\n"
 
@@ -2573,7 +2573,7 @@ class ConvertBash {
             let text = ""
             for (let v = 0; v < this.functiondefs.length; v++) {
                 let command = this.functiondefs[v][0]
-                text += "const std::string " + this.convertCommand(command.name) + "(const std::initializer_list<std::string> list);\n"
+                text += "const std::string " + this.convertCommand(command.name) + "(const std::initializer_list<std::string> &list);\n"
             }
             return text ? "\n\n" + text + "\n\n" : ""
         }
@@ -3483,7 +3483,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         int m_backup; \n\
         int m_redirectStream; \n\
         public: \n\
-        scopeexitcinfile(const std:: string &file) {\n\
+        scopeexitcinfile(const std::string &file) {\n\
         \n\
             m_redirectStream = open(file.c_str(), O_RDONLY); \n\
             m_backup = dup(0); \n\
