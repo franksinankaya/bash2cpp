@@ -3601,10 +3601,11 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             "   size_t offset = line.find(\"=\");\n\
                 if (line[0] == '#') continue;\n\
                 if (offset != std::string::npos) {;\n\
-                    std::string_view key(line.substr(0, offset));\n\
-                    std::string_view value(line.substr(offset + 1));\n\
-                    if (!value.empty()) \n\
+                    std::string key(line.substr(0, offset));\n\
+                    std::string value(line.substr(offset + 1));\n\
+                    if (!value.empty()){ \n\
                         setenv(key.data(), value.data(), 1);\n\
+                    }\n\
                 }\n" +
             "};\n" +
             "c.wait();\n" +
