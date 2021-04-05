@@ -35,7 +35,7 @@ if unknown is not None:
 
 repeat=0
 gnuprofile=0
-clang=0
+clang=1
 tcmalloc=0
 gperfprofile=0
 runmeasuretestonly=0
