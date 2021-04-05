@@ -1847,7 +1847,7 @@ class ConvertBash {
         maintext += "while ( "
         if (command.redirections) {
             let file = this.convertCommand(command.redirections[0].file)
-            maintext += " fileexists(" + file + ") && "
+            // maintext += " fileexists(" + file + ") && "
         }
         maintext += clause + ") {\n"
         maintext += thenval
