@@ -171,6 +171,7 @@ buildonly = [
 buildandexec = [
 # "4.1.sh",
 # "3.3.sh",
+"exit.sh",
 "env3.sh",
 "env.sh",
 "pipeline0.sh",

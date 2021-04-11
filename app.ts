@@ -1998,7 +1998,7 @@ class ConvertBash {
             case 'exit':
                 {
                     const retval = suffixprocessed ? "mystoi(std::string_view(" + suffixprocessed + "))" : "mystoi(getenv(\"?\"))"
-                    return "exit(" + retval + ")"
+                    return "bashexit(" + retval + ")"
                 }
             case '.':
             case 'source':
@@ -3351,6 +3351,18 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
             set_env(\"?\", 0);\n\
         }\n"
 
+        const bashexitstr = "\n\
+        std::streambuf *stdoutbackup = std::cout.rdbuf();\n\
+        void bashexit(int code) {\n\
+            int c;\n\
+            std::streambuf *current = std::cout.rdbuf();\n\
+            std::cout.rdbuf(stdoutbackup);\n\
+            int n = current->in_avail();\n\
+			if ((c = current->sgetc()) != EOF) printf(\"%c\", c); \n\
+			while ((c = current->snextc()) != EOF) printf(\"%c\", c); \n\
+            exit(code);\n\
+        }\n"
+
         let text = ""
         text += "void restoreargs(const std::vector<std::string> &list, int maxargs)\n"
         text += "{\n"
@@ -3623,7 +3635,7 @@ auto format_vector(boost::format fmt, const std::vector<char *> &v) {\n\
         "}\n"
         return fileexists + regularfileexists + pipefileexists + linkfileexists + socketfileexists + blockfileexists
             + charfileexists + filereadable + fileexecutable + filewritable + direxists + envCommand + execCommand + splitCommand + regexstr + echostr
-            + cdstr + readstr + incrementstr + processargsstr + scopeexitstr + upperstr + lowerstr + uppercapitalize + lowercapitalize + sourcefunc;
+            + cdstr + bashexitstr+ readstr + incrementstr + processargsstr + scopeexitstr + upperstr + lowerstr + uppercapitalize + lowercapitalize + sourcefunc;
     }
 }
 
