@@ -58,6 +58,7 @@
     "shell-quote-word": "^1.0.1",
     "to-pascal-case": "^1.0.0",
     "transform-spread-iterable": "^1.1.0",
+    "trim": "0.0.3",
     "unescape-js": "^1.0.5"
   }
 }
