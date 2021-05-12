@@ -249,9 +249,11 @@ def convertlist(cmd):
     return list
 
 def buildtest(testname=''):
+    found = False
     for i in buildonly:
         if testname and testname[0]!='' and i!=testname[0]:
             continue
+        found = True
         f=os.path.splitext(i)[0]
         cmd0="node app.js tests/" + i.split()[0] + " gen/" + f + ".cpp gen/" + f + ".log"
         list=convertlist(cmd0)
@@ -278,6 +280,10 @@ def buildtest(testname=''):
         if result!=0:
             sys.exit(result)
         print("%-30s" % (f))
+
+    if found == False:
+        print('test not found')
+        sys.exit()
 
 def buildandexectestone(i):
         f=os.path.splitext(i)[0]
@@ -344,9 +350,11 @@ def buildandexectestone(i):
         return (l, elapsed_time0, elapsed_time1, ((elapsed_time1 - elapsed_time0) * 100) / elapsed_time1)
 
 def buildandexectest(repeat, testname=''):
+    found = False
     for i in buildandexec:
         if testname and testname[0]!='' and i!=testname[0]:
             continue
+        found = True
         if repeat:
             average0=0
             average1=0
@@ -363,9 +371,12 @@ def buildandexectest(repeat, testname=''):
             print("%-30s %-30s %-30s %-30s" % ("average:" + name, average0/repeat, average1/repeat, average2/repeat))
         else:
             buildandexectestone(i)
+    if found == False:
+        print('test not found')
+        sys.exit()
 
 if runbuildtestonly:
-	buildtest()
+	buildtest(vars)
 	sys.exit()
 
 if runmeasuretestonly:
