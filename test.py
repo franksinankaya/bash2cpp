@@ -213,8 +213,8 @@ buildandexec = [
 "for0.sh",
 "braceexpansion.sh",
 "redirection.sh",
-"pipeline.sh",
-"hostname0.sh",
+#"pipeline.sh",
+#"hostname0.sh",
 "if9.sh",
 "redirect.sh",
 "while0.sh",
@@ -285,7 +285,7 @@ def buildtest(testname=''):
         print('test not found')
         sys.exit()
 
-def buildandexectestone(i):
+def buildtestone(i):
         f=os.path.splitext(i)[0]
         cmd0="node app.js tests/" + i.split()[0] + " gen/" + f + ".cpp gen/" + f + ".log"
         list=convertlist(cmd0)
@@ -308,6 +308,8 @@ def buildandexectestone(i):
         out0, result, err = execcommand(list)
         if result!=0:
             sys.exit(result)
+
+def exectestone(i):
         args=i.split()
         args.pop(0)
         l="tests/{}".format(i)
@@ -337,7 +339,7 @@ def buildandexectestone(i):
             out1, result, err = execcommand([l])
     
         elapsed_time1 = time.time() - start_time
-        print("%-30s %-30s %-30s %-30s" % (l, elapsed_time0, elapsed_time1, ((elapsed_time1 - elapsed_time0) * 100) / elapsed_time1))
+        #print("%-30s %-30s %-30s %-30s" % (l, elapsed_time0, elapsed_time1, ((elapsed_time1 - elapsed_time0) * 100) / elapsed_time1))
         if out0 != out1:
             text_file = open("out0.txt", "wt")
             text_file.write(out0)
@@ -361,13 +363,14 @@ def buildandexectest(repeat, testname=''):
             average2=0
             r=repeat
             name=""
+            buildtestone(i)
             while r > 0:
-                [name, elapsed_time0, elapsed_time1, delta,] = buildandexectestone(i)
+                [name, elapsed_time0, elapsed_time1, delta,] = exectestone(i)
                 average0 = average0 + elapsed_time0
                 average1 = average1 + elapsed_time1
                 average2 = average2 + delta
                 r=r-1
-            print("==============================================================================================================")
+            #print("==============================================================================================================")
             print("%-30s %-30s %-30s %-30s" % ("average:" + name, average0/repeat, average1/repeat, average2/repeat))
         else:
             buildandexectestone(i)
