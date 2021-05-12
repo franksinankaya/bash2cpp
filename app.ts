@@ -770,13 +770,36 @@ class ConvertBash {
                 cmd = "checkexitcode"
             }
             if ((name != "!") && !negative) {
-                if (!isbuiltin)
-                    clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, false, true, [], false, async) + ")"
-                else
-                    clause = " " + cmd + "(" + name + ", " + this.convertExecCommand(clausecommands, false, true, [], false, async) + ")"
+                if (!isbuiltin) {
+                    const issuesystem = false
+                    const handlecommands = true
+                    const stdout = false
+                    const collectresults = true
+                    let pipeline = false
+                    if (clausecommands.type == "Pipeline")
+                        pipeline = true
+                    clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, issuesystem, handlecommands, [], stdout, async, collectresults, pipeline) + ")"
+                }
+                else {
+                    const issuesystem = false
+                    const handlecommands = true
+                    const stdout = false
+                    const collectresults = true
+                    let pipeline = false
+                    if (clausecommands.type == "Pipeline")
+                        pipeline = true
+                    clause = " " + cmd + "(" + name + ", " + this.convertExecCommand(clausecommands, issuesystem, handlecommands, [], stdout, async, collectresults, pipeline) + ")"
+                }
             }
             else {
-                const clauseexpansion = this.convertExecCommand(clausecommands, false, true, [], false, async)
+                const issuesystem = false
+                const handlecommands = true
+                const stdout = false
+                const collectresults = true
+                let pipeline = false
+                if (clausecommands.type == "Pipeline")
+                    pipeline = true
+                const clauseexpansion = this.convertExecCommand(clausecommands, issuesystem, handlecommands, [], stdout, async, collectresults, pipeline)
                 if (!isbuiltin)
                     clause = "!" + cmd + "(" + clauseexpansion + ")"
                 else
@@ -1981,7 +2004,7 @@ class ConvertBash {
         return text
     }
 
-    public handleCommands(command:any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any, collectresult: any = true) {
+    public handleCommands(command:any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any, collectresult: any = true, pipeline: any) {
         let nametext = this.convertCommand(name)
         if (nametext[0] == '"' && nametext[nametext.length - 1] == '"') {
             nametext = nametext.substring(1, nametext.length - 2)
@@ -2094,7 +2117,9 @@ class ConvertBash {
                 {
                     let text = ""
                     if (issuesystem) {
-                        if (!collectresult)
+                        if (pipeline)
+                            text += ""
+                        else if (!collectresult)
                             text += "execnoresult("
                         else
                             text += "exec("
@@ -2104,7 +2129,9 @@ class ConvertBash {
                         if ((nametext == "printf") || (nametext == "echo")) {
                             text += ")"
                         } else {
-                            if (!collectresult) {
+                            if (pipeline)
+                                text += ""
+                            else if (!collectresult) {
                                 text += ")"
                             }
                             else {
@@ -2206,8 +2233,8 @@ class ConvertBash {
         return "redirects" + currentlength.toString() + "(" + maintext + ")"
     }
 
-    public convertExecCommand(command: any, issuesystem: any = true, handlecommands: any = true,
-                              coordinate = [], stdout: any = true, async: any = true, collectresults: any = true): string {
+    public convertExecCommand(command: any, issuesystem: any , handlecommands: any ,
+                              coordinate = [], stdout: any , async: any , collectresults: any, pipeline:any ): string {
         let currentline = ""
         let currentstr = ""
         if (command.async && async) {
@@ -2256,7 +2283,7 @@ class ConvertBash {
             //suffix = this.trimTrailingSpaces(suffix)
             let redirecttext = ""
             if (command.suffix && ignoreRedirects) {
-                const maintext = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem, collectresults)
+                const maintext = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem, collectresults, pipeline)
                 redirecttext = maintext
                 for (let i = 0; i < command.suffix.length; i++) {
                     if ((command.suffix[i].type == "Redirect")) {
@@ -2270,7 +2297,7 @@ class ConvertBash {
             }
 
             if (handlecommands) {
-                let t = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem, collectresults)
+                let t = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem, collectresults, pipeline)
                 let hasRedirect = false
                 if (command.suffix) {
                     for (let i = 0; i < command.suffix.length; i++) {
@@ -2340,10 +2367,17 @@ class ConvertBash {
                 this.terminate(command.commandAST.commands)
 
             for (let i = 0; i < command.commandAST.commands.length; i++) {
-                let collectresults = true
-                if (command.commandAST.commands[0].type == "Pipeline")
-                    collectresults = false
-                text += this.convertExecCommand(command.commandAST.commands[i], false, true, [], false, collectresults)
+                let async = true
+                let pipeline = false
+                if (command.commandAST.commands[0].type == "Pipeline") {
+                    async = false
+                    pipeline = true
+                }
+                const issuesystem = false
+                const handlecommands = true
+                const stdout = false
+                const collectresults = true
+                text += this.convertExecCommand(command.commandAST.commands[i], issuesystem, handlecommands, [], stdout, async, collectresults, pipeline)
                 if (command.commandAST.commands[0].type == "Pipeline")
                     pipeline = true
 
@@ -2542,8 +2576,16 @@ class ConvertBash {
                 return this.convertWord(command);
             case 'AssignmentWord':
                 return this.convertAssignment(command);
-            case 'Command':
-                return this.convertExecCommand(command);
+            case 'Command': {
+                const issuesystem = true
+                const handlecommands = true
+                const coordinate = []
+                const stdout = true
+                const async = true
+                const collectresults = true
+                const pipeline = false
+                return this.convertExecCommand(command, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline);
+            }
             case 'CompoundList':
                 return this.convertCompoundList(command);
             case 'Redirect':
@@ -2622,7 +2664,13 @@ class ConvertBash {
             let text = ""
             for (let v = 0; v < this.asyncs.length; v++) {
                 let name = "asyncs" + v
-                let maintext = this.convertExecCommand(this.asyncs[v][0], true, true, [this.asyncs[v][1], this.asyncs[v][2]], true, false)
+                const issuesystem = true
+                const handlecommands = true
+                const stdout = true
+                const async = false 
+                const collectresults = true
+                const pipeline = false
+                let maintext = this.convertExecCommand(this.asyncs[v][0], issuesystem, handlecommands, [this.asyncs[v][1], this.asyncs[v][2]], stdout, async, collectresults, pipeline)
 
                 text += "void " + name + "(void)"
                 if (prototype) {
@@ -2671,16 +2719,16 @@ class ConvertBash {
                     let redirectc = "redirectStream" + c.toString()
                     let previousc = c ? (c - 1): 0
                     let previousscope = "scope" + previousc.toString()
-                    let func = "scopeexitcincout "
+                    let func = "boost::process::pipe "
+                    let pipe = "boost::process::ipstream "
                     let funcvariable = scope
-                    if (c == (this.pipelines[v][0].commands.length - 1)) {
-                        funcvariable += "(stdout)"
-                    }
-                    if (c == 0)
-                        func = "scopeexitcout "
+                    //if (c == (this.pipelines[v][0].commands.length - 1)) {
+                    //    funcvariable += "(stdout)"
+                    //}
                     text += func + funcvariable + ";\n"
-                    if (c > 0)
-                        text += scope + ".writecin(" + previousscope + ".buf());\n"
+                    if (c == this.pipelines[v][0].commands.length - 1) {
+                        text += pipe + "outpipe" + c.toString() + ";\n"
+                    }
                     let coordinate = [this.pipelines[v][1], this.pipelines[v][2]]
                     let cmd = this.pipelines[v][0].commands[c]
                     if (cmd.name.text == "!") {
@@ -2691,15 +2739,62 @@ class ConvertBash {
                             this.terminate(cmd)
                         }
                     }
-                    text += this.convertExecCommand(cmd, true, true, coordinate, true, true, false) + ";\n"
-                    text += scope + ".release();\n"
+                    const issuesystem = true
+                    const handlecommands = true
+                    const stdout = true
+                    const async = true
+                    const collectresults = false
+                    const pipeline = true
+                    let hasRedirect = false
+                    if (cmd.suffix) {
+                        for (let i = 0; i < cmd.suffix.length; i++) {
+                            if ((cmd.suffix[i].type == "Redirect")) {
+                                hasRedirect = true;
+                                break;
+                            }
+                        }
+                    }
+                    text += "std::vector<std::string> args" + c.toString() + " = quotesplit(" + this.convertExecCommand(cmd, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline) + ", false);\n"
+                    text += "std::string prog" + c.toString() + "(args" + c.toString() + "[0]);\n"
+                    text += "args" + c.toString() + ".erase(args" + c.toString() + ".begin());\n"
+                    if (!hasRedirect)
+                        text += "boost::process::child " + "c" + c.toString() + "("
+                    text += "boost::process::search_path(prog" + c.toString() + "), boost::process::args(args" + c.toString() +")"
+
+                    if (c != 0) {
+                        text += ",  boost::process::std_in < " + previousscope
+                    }
+                    if (c == this.pipelines[v][0].commands.length - 1) {
+                        text += ",  boost::process::std_out > " + "outpipe" + c.toString()
+                    } else {
+                        text += ",  boost::process::std_out > " + scope
+                    }
+                    text += " )" + ";\n"
                     text += "\n"
                 }
+                text += "std::string outline;\n"
+                text += "std::string line;\n"
+                text += "while (" + "c" + (this.pipelines[v][0].commands.length - 1) + ".running() && std::getline(" + "outpipe" + (this.pipelines[v][0].commands.length - 1) + ", line))\n"
+                text += "    outline += line;\n"
                 text += "\n"
-                let finalres = "scope" + (this.pipelines[v][0].commands.length - 1).toString() + ".buf().str()"
+
+                for (let c = 0; c < this.pipelines[v][0].commands.length; c++) {
+                    text += "c" + c.toString() + ".wait()" + ";\n"
+                }
+                text += "while (std::getline(" + "outpipe" + (this.pipelines[v][0].commands.length - 1) + ", line))\n"
+                text += "    outline += line;\n"
+                text += "\n"
+                text += "if (!outline.empty()) std::cout << outline << std::endl;\n"
+                //text += "if (stdout) std::cout << outline << std::endl;\n"
+                text += "int exit_code = 0;\n"
+                for (let c = 0; c < this.pipelines[v][0].commands.length; c++) {
+                    text += "exit_code |= c" + c + ".exit_code();\n"
+                }
+                text += "set_env(\"?\", exit_code);\n"
+                //let finalres = "scope" + (this.pipelines[v][0].commands.length - 1).toString() + ".buf().str()"
                 //text += "if (stdout)\n"
                 //text += "std::cout << " + finalres + ";\n"
-                text += "return " + finalres + "; \n"
+                text += "return outline; \n"
                 text += "}\n"
                 text += "\n"
             }
@@ -3075,7 +3170,8 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             // Vector of string to save tokens  \n\
             size_t pos = 0; \n\
             size_t prev = 0; \n\
-            if (str.front() == '\\\'') prev++;\n\
+            bool shifted = false; \n\
+            if (str.front() == '\\\'') {prev++; shifted = true;}\n\
                                                 \n\
             while ((pos = str.find_first_of(delimiter, prev)) != std::string::npos) {\n\
                 if (pos > prev)\n\
@@ -3084,7 +3180,7 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             }\n\
             if (prev < str.length()){\n\
                 size_t end = str.length() - prev;\n\
-                if (str.back() == '\\\'') end--;\n\
+                if ((str.back() == '\\\'') && shifted) end--;\n\
                 tokens.emplace_back(str.substr(prev, end));\n\
             }\n\
         }\n\
@@ -3101,6 +3197,25 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                 split(elems, std::string(s.data()), delim); \n\
             }\n\
             return elems;\n\
+        }\n\
+        const std::vector <std::string> quotesplit(const std::string_view &s, bool ifs = true) {\n\
+            std::string delim(\" \\t\\n\"); \n\
+            std::vector <std::string> elems;\n\
+            const char *userdelim = getenv(\"IFS\");\n\
+            if ((userdelim != NULL) && ifs)\n\
+            {\n\
+                delim = userdelim;\n\
+            }\n\
+            { \n\
+                split(elems, std::string(s.data()), delim); \n\
+            }\n\
+            for (auto &f : elems){\n\
+                if ((f.front() == '\\'') && (f.back() == '\\'')) {\n\
+                    f.erase(0, 1);\n\
+                    f.erase(f.size() - 1);\n\
+                }\n\
+            } \n\
+            return elems; \n\
         }\n\
         void split(std::vector <std::string> &elems, const std::string_view &s, bool ifs= true) {\n\
             std::string delim(\" \\t\\n\"); \n\

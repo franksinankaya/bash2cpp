@@ -19,7 +19,7 @@ def get_params():
                         help='repeat test')
     parser.add_argument("-t", '--tcmalloc', action='store_true',
                         help='use tcmalloc library for heap operations')
-    parser.add_argument("-c", '--clang', action='store_true',
+    parser.add_argument("-c", '--clang', type=int,
                         help='use clang compiler')
     parser.add_argument("-pr", '--enablegperfprofiling', action='store_true',
                         help='use tcmalloc profiler for heap operations')
@@ -42,13 +42,13 @@ runmeasuretestonly=0
 runbuildtestonly=0
 opt="-O3"
 
-if params.repeattests:
+if params.repeattests is not None:
     repeat=params.repeattests
 
-if params.tcmalloc:
+if params.tcmalloc is not None:
     tcmalloc=params.tcmalloc
 
-if params.clang:
+if params.clang is not None:
     clang=params.clang
 
 if params.enablegnuprofiling:
@@ -260,7 +260,7 @@ def buildtest(testname=''):
             print(out)
             print(err)
             sys.exit(result)
-        cmd1="gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto  -lpcre -lpthread -lboost_system -std=c++17"
+        cmd1="gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto  -lpcre -lpthread -lboost_system -lboost_filesystem -std=c++17"
         if clang:
             cmd1 = "clang++ " + cmd1
         else:
@@ -286,7 +286,7 @@ def buildandexectestone(i):
         out, result, err = execcommand(list)
         if result!=0:
             sys.exit(result)
-        cmd1="gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -lpcre -lpthread -lboost_system -std=c++17"
+        cmd1="gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -lpcre -lpthread -lboost_system -lboost_filesystem -std=c++17"
         if clang:
             cmd1 = "clang++ " + cmd1
         else:
