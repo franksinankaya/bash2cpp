@@ -2751,13 +2751,52 @@ class ConvertBash {
                             }
                         }
                     }
-                    text += "std::string args" + c.toString() + ";\n"
-                    text += "std::vector<std::string> params" + c.toString() + ";\n"
-                    text += "argsplit(" + this.convertExecCommand(cmd, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline) + ", args" + c.toString() + ", params" + c.toString() + ");\n"
-                    if (!hasRedirect)
-                        text += "boost::process::child " + "c" + c.toString() + "("
-                    text += "args" + c.toString() + ", params" + c.toString() +""
+                    let hasExpansion = false;
+                    {
+                        var i
+                        if (cmd.expansion) {
+                            hasExpansion = true
+                        }
+                        if (cmd.name.expansion) {
+                            hasExpansion = true
+                        }
+                        if (cmd.suffix) {
+                            for (i = 0; i < cmd.suffix.length; i++) {
+                                if (cmd.suffix[i].expansion) {
+                                    hasExpansion = true
+                                    break
+                                }
+                            }
+                        }
+                        if (cmd.prefix) {
+                            for (i = 0; i < cmd.prefix.length; i++) {
+                                if (cmd.prefix[i].expansion) {
+                                    hasExpansion = true
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    if (hasExpansion) {
+                        text += "std::string args" + c.toString() + ";\n"
+                        text += "std::vector<std::string> params" + c.toString() + ";\n"
+                        text += "argsplit(" + this.convertExecCommand(cmd, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline) + ", args" + c.toString() + ", params" + c.toString() + ");\n"
+                        if (!hasRedirect)
+                            text += "boost::process::child " + "c" + c.toString() + "("
+                        text += "args" + c.toString() + ", params" + c.toString() + ""
+                    } else {
+                        if (!hasRedirect)
+                            text += "boost::process::child " + "c" + c.toString() + "("
+                        if (cmd.name.text.indexOf('/') == -1)
+                            text += "" + "boost::process::search_path(\"" + cmd.name.text + "\")" + ","
+                        else
+                            text += "\"" + cmd.name.text + "\","
 
+                        for (let i = 0; i < cmd.suffix.length; i++) {
+                            text += "\"" + cmd.suffix[i].text + "\""
+                            if (i != (cmd.suffix.length - 1)) text += ","
+                        }
+                    }
                     if (c != 0) {
                         text += ",  boost::process::std_in < " + previousscope
                     }
