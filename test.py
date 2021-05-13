@@ -214,7 +214,7 @@ buildandexec = [
 "braceexpansion.sh",
 "redirection.sh",
 #"pipeline.sh",
-#"hostname0.sh",
+"hostname0.sh",
 "if9.sh",
 "redirect.sh",
 "while0.sh",

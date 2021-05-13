@@ -2051,28 +2051,6 @@ class ConvertBash {
                 return "readval(" + suffixprocessed + ")"
             case ':':
                 return ""
-            case 'echo':
-                {
-                    let text = ""
-                    if ((suffixprocessed.substring(0, 2) == "\"'") && (suffixprocessed.substring(suffixprocessed.length - 2, suffixprocessed.length) == "'\"")) {
-                        suffixprocessed = '"' + suffixprocessed.substring(2, suffixprocessed.length - 2) + '"'
-                    }
-                    if ((suffixprocessed.substring(0, 1) == "'") && (suffixprocessed.substring(suffixprocessed.length - 1, suffixprocessed.length) == "'")) {
-                        suffixprocessed = suffixprocessed.substring(1, suffixprocessed.length - 1)
-                    }
-
-                    if (issuesystem) {
-                        text += "echo("
-
-                        if (suffixprocessed)
-                            text += suffixprocessed
-                        else
-                            text += "\"\""
-
-                        text += ")"
-                        return text
-                    }
-                }
             case 'printf':
                 {
                     let text = ""
@@ -2113,6 +2091,28 @@ class ConvertBash {
                     }
                 }
             // falls through
+            case 'echo':
+                {
+                    let text = ""
+                    if ((suffixprocessed.substring(0, 2) == "\"'") && (suffixprocessed.substring(suffixprocessed.length - 2, suffixprocessed.length) == "'\"")) {
+                        suffixprocessed = '"' + suffixprocessed.substring(2, suffixprocessed.length - 2) + '"'
+                    }
+                    if ((suffixprocessed.substring(0, 1) == "'") && (suffixprocessed.substring(suffixprocessed.length - 1, suffixprocessed.length) == "'")) {
+                        suffixprocessed = suffixprocessed.substring(1, suffixprocessed.length - 1)
+                    }
+
+                    if (issuesystem && !pipeline ) {
+                        text += "echo("
+
+                        if (suffixprocessed)
+                            text += suffixprocessed
+                        else
+                            text += "\"\""
+
+                        text += ")"
+                        return text
+                    }
+                }
             default:
                 {
                     let text = ""
@@ -2127,7 +2127,8 @@ class ConvertBash {
                     text += this.handleExec(issuesystem, nameexpanded, suffixarray, suffixprocessed, nametext)
                     if (issuesystem) {
                         if ((nametext == "printf") || (nametext == "echo")) {
-                            text += ")"
+                            if (!pipeline)
+                                text += ")"
                         } else {
                             if (pipeline)
                                 text += ""
