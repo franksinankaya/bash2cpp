@@ -2751,16 +2751,16 @@ class ConvertBash {
                             }
                         }
                     }
-                    text += "std::vector<std::string> args" + c.toString() + ";\n"
-                    text += "quotesplit(" + this.convertExecCommand(cmd, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline) + ", args" + c.toString() + ", false);\n"
-                    text += "std::string prog" + c.toString() + "(args" + c.toString() + "[0]);\n"
+                    text += "std::string args" + c.toString() + ";\n"
+                    text += "std::vector<std::string> params" + c.toString() + ";\n"
+                    text += "quotesplit(" + this.convertExecCommand(cmd, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline) + ", args" + c.toString() + ", params" + c.toString() + ");\n"
                     text += "std::string path" + c.toString() + ";\n"
+                    text += "std::string prog" + c.toString() + "(args" + c.toString() + ");\n"
                     text += "if (prog" + c.toString() + ".find('/') != std::string::npos) path" + c.toString() + " = prog" + c.toString() + ";\n"
                     text += "else path" + c.toString() + " = boost::process::search_path(prog" + c.toString() + ").string();\n"
-                    text += "args" + c.toString() + ".erase(args" + c.toString() + ".begin());\n"
                     if (!hasRedirect)
                         text += "boost::process::child " + "c" + c.toString() + "("
-                    text += "path" + c.toString() + ", boost::process::args(args" + c.toString() +")"
+                    text += "path" + c.toString() + ", params" + c.toString() +""
 
                     if (c != 0) {
                         text += ",  boost::process::std_in < " + previousscope
@@ -3199,19 +3199,15 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             }\n\
             return elems;\n\
         }\n\
-        const void quotesplit(const std::string_view &cmd, std::vector <std::string> &elems, bool ifs = true) {\n\
-            wordexp_t p; \n\
+        const void quotesplit(const std::string_view &cmd, std::string &prog, std::vector<std::string> &params) {\n\
+            wordexp_t p;\n\
             char **w; \n\
             if (wordexp(cmd.data(), &p, 0)) return; \n\
-            for (int i = 0; i < p.we_wordc; i++)\n\
-                elems.emplace_back(p.we_wordv[i]);\n\
+            prog = p.we_wordv[0];\n\
+            for (int i = 1; i < p.we_wordc; i++) {\n\
+                params.emplace_back(p.we_wordv[i]);\n\
+            };\n\
             wordfree(&p);\n\
-            for (auto &f : elems){\n\
-                if ((f.front() == '\\'') && (f.back() == '\\'')) {\n\
-                    f.erase(0, 1);\n\
-                    f.erase(f.size() - 1);\n\
-                }\n\
-            } \n\
         }\n\
         void split(std::vector <std::string> &elems, const std::string_view &s, bool ifs= true) {\n\
             std::string delim(\" \\t\\n\"); \n\
