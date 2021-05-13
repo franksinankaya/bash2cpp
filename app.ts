@@ -2368,7 +2368,6 @@ class ConvertBash {
 
             for (let i = 0; i < command.commandAST.commands.length; i++) {
                 let async = true
-                let pipeline = false
                 if (command.commandAST.commands[0].type == "Pipeline") {
                     async = false
                     pipeline = true
@@ -2378,8 +2377,6 @@ class ConvertBash {
                 const stdout = false
                 const collectresults = true
                 text += this.convertExecCommand(command.commandAST.commands[i], issuesystem, handlecommands, [], stdout, async, collectresults, pipeline)
-                if (command.commandAST.commands[0].type == "Pipeline")
-                    pipeline = true
 
                 if (this.isKnownFunction(command.commandAST.commands[i].name, command.commandAST.commands[i].suffix)) {
                     isinternal = true;

@@ -309,7 +309,7 @@ def buildtestone(i):
         if result!=0:
             sys.exit(result)
 
-def exectestone(i):
+def exectestone(i,printresult = True):
         args=i.split()
         args.pop(0)
         l="tests/{}".format(i)
@@ -339,7 +339,8 @@ def exectestone(i):
             out1, result, err = execcommand([l])
     
         elapsed_time1 = time.time() - start_time
-        #print("%-30s %-30s %-30s %-30s" % (l, elapsed_time0, elapsed_time1, ((elapsed_time1 - elapsed_time0) * 100) / elapsed_time1))
+        if printresult:
+            print("%-30s %-30s %-30s %-30s" % (l, elapsed_time0, elapsed_time1, ((elapsed_time1 - elapsed_time0) * 100) / elapsed_time1))
         if out0 != out1:
             text_file = open("out0.txt", "wt")
             text_file.write(out0)
@@ -365,7 +366,7 @@ def buildandexectest(repeat, testname=''):
             name=""
             buildtestone(i)
             while r > 0:
-                [name, elapsed_time0, elapsed_time1, delta,] = exectestone(i)
+                [name, elapsed_time0, elapsed_time1, delta,] = exectestone(i, False)
                 average0 = average0 + elapsed_time0
                 average1 = average1 + elapsed_time1
                 average2 = average2 + delta
@@ -373,7 +374,8 @@ def buildandexectest(repeat, testname=''):
             #print("==============================================================================================================")
             print("%-30s %-30s %-30s %-30s" % ("average:" + name, average0/repeat, average1/repeat, average2/repeat))
         else:
-            buildandexectestone(i)
+            buildtestone(i)
+            exectestone(i)
     if found == False:
         print('test not found')
         sys.exit()
