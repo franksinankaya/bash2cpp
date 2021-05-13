@@ -2751,7 +2751,8 @@ class ConvertBash {
                             }
                         }
                     }
-                    text += "std::vector<std::string> args" + c.toString() + " = quotesplit(" + this.convertExecCommand(cmd, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline) + ", false);\n"
+                    text += "std::vector<std::string> args" + c.toString() + ";\n"
+                    text += "quotesplit(" + this.convertExecCommand(cmd, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline) + ", args" + c.toString() + ", false);\n"
                     text += "std::string prog" + c.toString() + "(args" + c.toString() + "[0]);\n"
                     text += "std::string path" + c.toString() + ";\n"
                     text += "if (prog" + c.toString() + ".find('/') != std::string::npos) path" + c.toString() + " = prog" + c.toString() + ";\n"
@@ -3198,11 +3199,10 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             }\n\
             return elems;\n\
         }\n\
-        const std::vector <std::string> quotesplit(const std::string_view &cmd, bool ifs = true) {\n\
+        const void quotesplit(const std::string_view &cmd, std::vector <std::string> &elems, bool ifs = true) {\n\
             wordexp_t p; \n\
             char **w; \n\
-            wordexp(cmd.data(), &p, 0); \n\
-            std::vector <std::string> elems;\n\
+            if (wordexp(cmd.data(), &p, 0)) return; \n\
             for (int i = 0; i < p.we_wordc; i++)\n\
                 elems.emplace_back(p.we_wordv[i]);\n\
             wordfree(&p);\n\
@@ -3212,7 +3212,6 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
                     f.erase(f.size() - 1);\n\
                 }\n\
             } \n\
-            return elems; \n\
         }\n\
         void split(std::vector <std::string> &elems, const std::string_view &s, bool ifs= true) {\n\
             std::string delim(\" \\t\\n\"); \n\
