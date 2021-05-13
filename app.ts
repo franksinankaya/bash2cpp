@@ -2753,14 +2753,10 @@ class ConvertBash {
                     }
                     text += "std::string args" + c.toString() + ";\n"
                     text += "std::vector<std::string> params" + c.toString() + ";\n"
-                    text += "quotesplit(" + this.convertExecCommand(cmd, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline) + ", args" + c.toString() + ", params" + c.toString() + ");\n"
-                    text += "std::string path" + c.toString() + ";\n"
-                    text += "std::string prog" + c.toString() + "(args" + c.toString() + ");\n"
-                    text += "if (prog" + c.toString() + ".find('/') != std::string::npos) path" + c.toString() + " = prog" + c.toString() + ";\n"
-                    text += "else path" + c.toString() + " = boost::process::search_path(prog" + c.toString() + ").string();\n"
+                    text += "argsplit(" + this.convertExecCommand(cmd, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline) + ", args" + c.toString() + ", params" + c.toString() + ");\n"
                     if (!hasRedirect)
                         text += "boost::process::child " + "c" + c.toString() + "("
-                    text += "path" + c.toString() + ", params" + c.toString() +""
+                    text += "args" + c.toString() + ", params" + c.toString() +""
 
                     if (c != 0) {
                         text += ",  boost::process::std_in < " + previousscope
@@ -3199,11 +3195,13 @@ void execcommand(int *outfd, const std::string_view &cmd, int & exitstatus) \n\
             }\n\
             return elems;\n\
         }\n\
-        const void quotesplit(const std::string_view &cmd, std::string &prog, std::vector<std::string> &params) {\n\
+        const void argsplit(const std::string_view &cmd, std::string &prog, std::vector<std::string> &params) {\n\
             wordexp_t p;\n\
             char **w; \n\
             if (wordexp(cmd.data(), &p, 0)) return; \n\
             prog = p.we_wordv[0];\n\
+            if (prog.find('/') == std::string::npos)\n\
+                prog = boost::process::search_path(prog).string();\n\
             for (int i = 1; i < p.we_wordc; i++) {\n\
                 params.emplace_back(p.we_wordv[i]);\n\
             };\n\
