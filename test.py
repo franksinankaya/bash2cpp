@@ -23,6 +23,10 @@ def get_params():
                         help='use clang compiler')
     parser.add_argument("-pr", '--enablegperfprofiling', action='store_true',
                         help='use tcmalloc profiler for heap operations')
+    parser.add_argument("-s", '--showsloweronly', action='store_true',
+                        help='show slower only')
+
+
     parser.add_argument('vars', nargs='*')
     params, unknown = parser.parse_known_args()
     return params, unknown 
@@ -41,6 +45,10 @@ gperfprofile=0
 runmeasuretestonly=0
 runbuildtestonly=0
 opt="-O3"
+showsloweronly=0
+
+if params.showsloweronly is not None:
+    showsloweronly=params.showsloweronly
 
 if params.repeattests is not None:
     repeat=params.repeattests
@@ -309,7 +317,7 @@ def buildtestone(i):
         if result!=0:
             sys.exit(result)
 
-def exectestone(i,printresult = True):
+def exectestone(i,printresult = True, showsloweronly = False):
         args=i.split()
         args.pop(0)
         l="tests/{}".format(i)
@@ -339,7 +347,7 @@ def exectestone(i,printresult = True):
             out1, result, err = execcommand([l])
     
         elapsed_time1 = time.time() - start_time
-        if printresult:
+        if printresult and ((showsloweronly == False) or (elapsed_time1 > elapsed_time0)):
             print("%-30s %-30s %-30s %-30s" % (l, elapsed_time0, elapsed_time1, ((elapsed_time1 - elapsed_time0) * 100) / elapsed_time1))
         if out0 != out1:
             text_file = open("out0.txt", "wt")
@@ -352,7 +360,7 @@ def exectestone(i,printresult = True):
             sys.exit(1)
         return (l, elapsed_time0, elapsed_time1, ((elapsed_time1 - elapsed_time0) * 100) / elapsed_time1)
 
-def buildandexectest(repeat, testname=''):
+def buildandexectest(repeat, testname='', showsloweronly=False):
     found = False
     for i in buildandexec:
         if testname and testname[0]!='' and i!=testname[0]:
@@ -366,13 +374,14 @@ def buildandexectest(repeat, testname=''):
             name=""
             buildtestone(i)
             while r > 0:
-                [name, elapsed_time0, elapsed_time1, delta,] = exectestone(i, False)
+                [name, elapsed_time0, elapsed_time1, delta,] = exectestone(i, False, showsloweronly)
                 average0 = average0 + elapsed_time0
                 average1 = average1 + elapsed_time1
                 average2 = average2 + delta
                 r=r-1
             #print("==============================================================================================================")
-            print("%-30s %-30s %-30s %-30s" % ("average:" + name, average0/repeat, average1/repeat, average2/repeat))
+            if (showsloweronly == False) or (average1 > average0):
+                print("%-30s %-30s %-30s %-30s" % ("average:" + name, average0/repeat, average1/repeat, average2/repeat))
         else:
             buildtestone(i)
             exectestone(i)
@@ -385,8 +394,8 @@ if runbuildtestonly:
 	sys.exit()
 
 if runmeasuretestonly:
-	buildandexectest(repeat, vars)
+	buildandexectest(repeat, vars, showsloweronly)
 	sys.exit()
 
 buildtest()
-buildandexectest(repeat, vars)
+buildandexectest(repeat, vars, showsloweronly)
