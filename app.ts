@@ -770,13 +770,36 @@ class ConvertBash {
                 cmd = "checkexitcode"
             }
             if ((name != "!") && !negative) {
-                if (!isbuiltin)
-                    clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, false, true, [], false, async) + ")"
-                else
-                    clause = " " + cmd + "(" + name + ", " + this.convertExecCommand(clausecommands, false, true, [], false, async) + ")"
+                if (!isbuiltin) {
+                    const issuesystem = false
+                    const handlecommands = true
+                    const stdout = false
+                    const collectresults = true
+                    let pipeline = false
+                    if (clausecommands.type == "Pipeline")
+                        pipeline = true
+                    clause = " " + cmd + "(" + this.convertExecCommand(clausecommands, issuesystem, handlecommands, [], stdout, async, collectresults, pipeline) + ")"
+                }
+                else {
+                    const issuesystem = false
+                    const handlecommands = true
+                    const stdout = false
+                    const collectresults = true
+                    let pipeline = false
+                    if (clausecommands.type == "Pipeline")
+                        pipeline = true
+                    clause = " " + cmd + "(" + name + ", " + this.convertExecCommand(clausecommands, issuesystem, handlecommands, [], stdout, async, collectresults, pipeline) + ")"
+                }
             }
             else {
-                const clauseexpansion = this.convertExecCommand(clausecommands, false, true, [], false, async)
+                const issuesystem = false
+                const handlecommands = true
+                const stdout = false
+                const collectresults = true
+                let pipeline = false
+                if (clausecommands.type == "Pipeline")
+                    pipeline = true
+                const clauseexpansion = this.convertExecCommand(clausecommands, issuesystem, handlecommands, [], stdout, async, collectresults, pipeline)
                 if (!isbuiltin)
                     clause = "!" + cmd + "(" + clauseexpansion + ")"
                 else
@@ -1981,7 +2004,7 @@ class ConvertBash {
         return text
     }
 
-    public handleCommands(command:any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any, collectresult: any = true) {
+    public handleCommands(command:any, name: any, suffixarray: any, suffixprocessed: any, issuesystem: any, collectresult: any = true, pipeline: any) {
         let nametext = this.convertCommand(name)
         if (nametext[0] == '"' && nametext[nametext.length - 1] == '"') {
             nametext = nametext.substring(1, nametext.length - 2)
@@ -2206,8 +2229,8 @@ class ConvertBash {
         return "redirects" + currentlength.toString() + "(" + maintext + ")"
     }
 
-    public convertExecCommand(command: any, issuesystem: any = true, handlecommands: any = true,
-                              coordinate = [], stdout: any = true, async: any = true, collectresults: any = true): string {
+    public convertExecCommand(command: any, issuesystem: any , handlecommands: any ,
+                              coordinate = [], stdout: any , async: any , collectresults: any, pipeline:any ): string {
         let currentline = ""
         let currentstr = ""
         if (command.async && async) {
@@ -2256,7 +2279,7 @@ class ConvertBash {
             //suffix = this.trimTrailingSpaces(suffix)
             let redirecttext = ""
             if (command.suffix && ignoreRedirects) {
-                const maintext = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem, collectresults)
+                const maintext = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem, collectresults, pipeline)
                 redirecttext = maintext
                 for (let i = 0; i < command.suffix.length; i++) {
                     if ((command.suffix[i].type == "Redirect")) {
@@ -2270,7 +2293,7 @@ class ConvertBash {
             }
 
             if (handlecommands) {
-                let t = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem, collectresults)
+                let t = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem, collectresults, pipeline)
                 let hasRedirect = false
                 if (command.suffix) {
                     for (let i = 0; i < command.suffix.length; i++) {
@@ -2340,12 +2363,16 @@ class ConvertBash {
                 this.terminate(command.commandAST.commands)
 
             for (let i = 0; i < command.commandAST.commands.length; i++) {
-                let collectresults = true
-                if (command.commandAST.commands[0].type == "Pipeline")
-                    collectresults = false
-                text += this.convertExecCommand(command.commandAST.commands[i], false, true, [], false, collectresults)
-                if (command.commandAST.commands[0].type == "Pipeline")
+                let async = true
+                if (command.commandAST.commands[0].type == "Pipeline") {
+                    async = false
                     pipeline = true
+                }
+                const issuesystem = false
+                const handlecommands = true
+                const stdout = false
+                const collectresults = true
+                text += this.convertExecCommand(command.commandAST.commands[i], issuesystem, handlecommands, [], stdout, async, collectresults, pipeline)
 
                 if (this.isKnownFunction(command.commandAST.commands[i].name, command.commandAST.commands[i].suffix)) {
                     isinternal = true;
@@ -2542,8 +2569,16 @@ class ConvertBash {
                 return this.convertWord(command);
             case 'AssignmentWord':
                 return this.convertAssignment(command);
-            case 'Command':
-                return this.convertExecCommand(command);
+            case 'Command': {
+                const issuesystem = true
+                const handlecommands = true
+                const coordinate = []
+                const stdout = true
+                const async = true
+                const collectresults = true
+                const pipeline = false
+                return this.convertExecCommand(command, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline);
+            }
             case 'CompoundList':
                 return this.convertCompoundList(command);
             case 'Redirect':
@@ -2622,7 +2657,13 @@ class ConvertBash {
             let text = ""
             for (let v = 0; v < this.asyncs.length; v++) {
                 let name = "asyncs" + v
-                let maintext = this.convertExecCommand(this.asyncs[v][0], true, true, [this.asyncs[v][1], this.asyncs[v][2]], true, false)
+                const issuesystem = true
+                const handlecommands = true
+                const stdout = true
+                const async = false 
+                const collectresults = true
+                const pipeline = false
+                let maintext = this.convertExecCommand(this.asyncs[v][0], issuesystem, handlecommands, [this.asyncs[v][1], this.asyncs[v][2]], stdout, async, collectresults, pipeline)
 
                 text += "void " + name + "(void)"
                 if (prototype) {
@@ -2691,7 +2732,14 @@ class ConvertBash {
                             this.terminate(cmd)
                         }
                     }
-                    text += this.convertExecCommand(cmd, true, true, coordinate, true, true, false) + ";\n"
+                    const issuesystem = true
+                    const handlecommands = true
+                    const stdout = true
+                    const async = true
+                    const collectresults = false
+                    const pipeline = true
+
+                    text += this.convertExecCommand(cmd, issuesystem, handlecommands, coordinate, stdout, async, collectresults, pipeline) + ";\n"
                     text += scope + ".release();\n"
                     text += "\n"
                 }
