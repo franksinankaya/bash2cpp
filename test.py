@@ -19,7 +19,7 @@ def get_params():
                         help='repeat test')
     parser.add_argument("-t", '--tcmalloc', action='store_true',
                         help='use tcmalloc library for heap operations')
-    parser.add_argument("-c", '--clang', action='store_true',
+    parser.add_argument("-c", '--clang', type=int,
                         help='use clang compiler')
     parser.add_argument("-pr", '--enablegperfprofiling', action='store_true',
                         help='use tcmalloc profiler for heap operations')
@@ -42,13 +42,13 @@ runmeasuretestonly=0
 runbuildtestonly=0
 opt="-O3"
 
-if params.repeattests:
+if params.repeattests is not None:
     repeat=params.repeattests
 
-if params.tcmalloc:
+if params.tcmalloc is not None:
     tcmalloc=params.tcmalloc
 
-if params.clang:
+if params.clang is not None:
     clang=params.clang
 
 if params.enablegnuprofiling:
@@ -249,9 +249,11 @@ def convertlist(cmd):
     return list
 
 def buildtest(testname=''):
+    found = False
     for i in buildonly:
         if testname and testname[0]!='' and i!=testname[0]:
             continue
+        found = True
         f=os.path.splitext(i)[0]
         cmd0="node app.js tests/" + i.split()[0] + " gen/" + f + ".cpp gen/" + f + ".log"
         list=convertlist(cmd0)
@@ -260,7 +262,7 @@ def buildtest(testname=''):
             print(out)
             print(err)
             sys.exit(result)
-        cmd1="gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto  -lpcre -lpthread -lboost_system -std=c++17"
+        cmd1="gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto  -lpcre -lpthread -lboost_system -lboost_filesystem -std=c++17"
         if clang:
             cmd1 = "clang++ " + cmd1
         else:
@@ -279,14 +281,18 @@ def buildtest(testname=''):
             sys.exit(result)
         print("%-30s" % (f))
 
-def buildandexectestone(i):
+    if found == False:
+        print('test not found')
+        sys.exit()
+
+def buildtestone(i):
         f=os.path.splitext(i)[0]
         cmd0="node app.js tests/" + i.split()[0] + " gen/" + f + ".cpp gen/" + f + ".log"
         list=convertlist(cmd0)
         out, result, err = execcommand(list)
         if result!=0:
             sys.exit(result)
-        cmd1="gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -lpcre -lpthread -lboost_system -std=c++17"
+        cmd1="gen/" + f + ".cpp -o gen/" + f + " " + opt + " -ffunction-sections -fdata-sections -Wl,--gc-sections -flto -lpcre -lpthread -lboost_system -lboost_filesystem -std=c++17"
         if clang:
             cmd1 = "clang++ " + cmd1
         else:
@@ -302,6 +308,8 @@ def buildandexectestone(i):
         out0, result, err = execcommand(list)
         if result!=0:
             sys.exit(result)
+
+def exectestone(i,printresult = True):
         args=i.split()
         args.pop(0)
         l="tests/{}".format(i)
@@ -331,7 +339,8 @@ def buildandexectestone(i):
             out1, result, err = execcommand([l])
     
         elapsed_time1 = time.time() - start_time
-        print("%-30s %-30s %-30s %-30s" % (l, elapsed_time0, elapsed_time1, ((elapsed_time1 - elapsed_time0) * 100) / elapsed_time1))
+        if printresult:
+            print("%-30s %-30s %-30s %-30s" % (l, elapsed_time0, elapsed_time1, ((elapsed_time1 - elapsed_time0) * 100) / elapsed_time1))
         if out0 != out1:
             text_file = open("out0.txt", "wt")
             text_file.write(out0)
@@ -344,28 +353,35 @@ def buildandexectestone(i):
         return (l, elapsed_time0, elapsed_time1, ((elapsed_time1 - elapsed_time0) * 100) / elapsed_time1)
 
 def buildandexectest(repeat, testname=''):
+    found = False
     for i in buildandexec:
         if testname and testname[0]!='' and i!=testname[0]:
             continue
+        found = True
         if repeat:
             average0=0
             average1=0
             average2=0
             r=repeat
             name=""
+            buildtestone(i)
             while r > 0:
-                [name, elapsed_time0, elapsed_time1, delta,] = buildandexectestone(i)
+                [name, elapsed_time0, elapsed_time1, delta,] = exectestone(i, False)
                 average0 = average0 + elapsed_time0
                 average1 = average1 + elapsed_time1
                 average2 = average2 + delta
                 r=r-1
-            print("==============================================================================================================")
+            #print("==============================================================================================================")
             print("%-30s %-30s %-30s %-30s" % ("average:" + name, average0/repeat, average1/repeat, average2/repeat))
         else:
-            buildandexectestone(i)
+            buildtestone(i)
+            exectestone(i)
+    if found == False:
+        print('test not found')
+        sys.exit()
 
 if runbuildtestonly:
-	buildtest()
+	buildtest(vars)
 	sys.exit()
 
 if runmeasuretestonly:
