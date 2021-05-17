@@ -27,15 +27,14 @@
     "test": "python3 test.py"
   },
   "devDependencies": {
-    "@types/node": "^8.10.66",
+    "@types/node": "^15.3.0",
     "ava": "^3.15.0",
     "coveralls": "^3.1.0",
-    "doctoc": "^1.2.0",
-    "json5": "^0.5.0",
+    "json5": "^2.2.0",
     "mode-grammar-builder": "^0.6.0",
     "nyc": "^15.1.0",
-    "typescript": "^3.9.7",
-    "xo": "^0.37.1"
+    "typescript": "^4.2.4",
+    "xo": "^0.40.1"
   },
   "dependencies": {
     "array-last": "^1.1.1",
@@ -44,21 +43,22 @@
     "curry": "^1.2.0",
     "deep-freeze": "0.0.1",
     "filter-iterator": "0.0.1",
-    "filter-obj": "^1.1.0",
-    "has-own-property": "^0.1.0",
+    "filter-obj": "^2.0.2",
+    "has-own-property": "^1.0.0",
     "identity-function": "^1.0.0",
-    "iterable-lookahead": "^1.0.0",
+    "iterable-lookahead": "^2.0.0",
     "iterable-transform-replace": "^1.1.1",
-    "magic-string": "^0.16.0",
+    "magic-string": "^0.25.7",
     "map-iterable": "^1.0.1",
-    "map-obj": "^2.0.0",
+    "map-obj": "^4.2.1",
     "object-pairs": "^0.1.0",
-    "object-values": "^1.0.0",
+    "object-values": "^2.0.0",
     "reverse-arguments": "^1.0.0",
     "shell-quote-word": "^1.0.1",
     "to-pascal-case": "^1.0.0",
     "transform-spread-iterable": "^1.1.0",
-    "trim": "0.0.3",
+    "trim": "^1.0.1",
+    "underscore": "^1.13.1",
     "unescape-js": "^1.0.5"
   }
 }
