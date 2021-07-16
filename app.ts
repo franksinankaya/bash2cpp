@@ -351,11 +351,12 @@ class ConvertBash {
     private convertCondition(leftValue: any, rightValue: any, opValue: any, rightexpansion: any, leftexpansion: any): [string, string] {
         let op = ""
         let clause = ""
+        let rightValueQuoted = rightValue
         if (rightexpansion) {
             if (rightexpansion.length > 0) {
                 if (rightexpansion[0].loc.start > 0) {
                     if (rightValue[0] != "\"") {
-                        rightValue = "\"" + rightValue
+                        rightValueQuoted = "\"" + rightValue
                     }
                 }
             }
@@ -452,7 +453,7 @@ class ConvertBash {
                 break
             case "!-h":
             case "!-L":
-                clause = "!linkfileexists(" + (!rightexpansion ? "\"" : "") + rightValue + (!rightexpansion ? "\"" : "") + ")"
+                clause = "!linkfileexists(" + (!rightexpansion ? "\"" : "") + rightValueQuoted + (!rightexpansion ? "\"" : "") + ")"
                 break
             case "-S":
                 clause = "socketfileexists(" + (!rightexpansion ? "\"" : "") + rightValue + (!rightexpansion ? "\"" : "") + ")"
