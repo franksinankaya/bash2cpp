@@ -351,7 +351,16 @@ class ConvertBash {
     private convertCondition(leftValue: any, rightValue: any, opValue: any, rightexpansion: any, leftexpansion: any): [string, string] {
         let op = ""
         let clause = ""
-
+        let rightValueQuoted = rightValue
+        if (rightexpansion) {
+            if (rightexpansion.length > 0) {
+                if (rightexpansion[0].loc.start > 0) {
+                    if (rightValue[0] != "\"") {
+                        rightValueQuoted = "\"" + rightValue
+                    }
+                }
+            }
+        }
         switch (opValue) {
             case "-eq":
                 if (rightexpansion)
@@ -444,7 +453,7 @@ class ConvertBash {
                 break
             case "!-h":
             case "!-L":
-                clause = "!linkfileexists(" + (!rightexpansion ? "\"" : "") + rightValue + (!rightexpansion ? "\"" : "") + ")"
+                clause = "!linkfileexists(" + (!rightexpansion ? "\"" : "") + rightValueQuoted + (!rightexpansion ? "\"" : "") + ")"
                 break
             case "-S":
                 clause = "socketfileexists(" + (!rightexpansion ? "\"" : "") + rightValue + (!rightexpansion ? "\"" : "") + ")"
@@ -2279,6 +2288,15 @@ class ConvertBash {
             //suffix = this.trimTrailingSpaces(suffix)
             let redirecttext = ""
             if (command.suffix && ignoreRedirects) {
+                if (suffix == "\"\"") {
+                    if (command.suffix.length == 1) {
+                        if (command.suffix[0].type == "Redirect") {
+                            if (command.suffix[0].numberIo) {
+                                suffix = "\"" + command.suffix[0].numberIo.text + "\""
+                            }
+                        }
+                    }
+                }
                 const maintext = this.handleCommands(command, command.name, command.suffix, suffix, issuesystem, collectresults, pipeline)
                 redirecttext = maintext
                 for (let i = 0; i < command.suffix.length; i++) {
