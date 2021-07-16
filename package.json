@@ -34,7 +34,7 @@
     "mode-grammar-builder": "^0.6.0",
     "nyc": "^15.1.0",
     "typescript": "^4.2.4",
-    "xo": "^0.40.1"
+    "xo": "^0.42.0"
   },
   "dependencies": {
     "array-last": "^1.1.1",
