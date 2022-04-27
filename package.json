@@ -33,7 +33,6 @@
     "json5": "^2.2.0",
     "mode-grammar-builder": "^0.6.0",
     "nyc": "^15.1.0",
-    "typescript": "^4.2.4",
     "xo": "^0.42.0"
   },
   "dependencies": {
@@ -58,7 +57,9 @@
     "to-pascal-case": "^1.0.0",
     "transform-spread-iterable": "^1.1.0",
     "trim": "^1.0.1",
+    "typescript": "^4.6.3",
     "underscore": "^1.13.1",
-    "unescape-js": "^1.0.5"
+    "unescape-js": "^1.0.5",
+    "webpack": "^5.72.0"
   }
 }
