@@ -60,6 +60,6 @@
     "typescript": "^4.6.3",
     "underscore": "^1.13.1",
     "unescape-js": "^1.0.5",
-    "webpack": "^5.72.0"
+    "webpack": "^5.80.0"
   }
 }
