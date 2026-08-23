@@ -32,7 +32,7 @@
     "coveralls": "^3.1.0",
     "json5": "^2.2.3",
     "mode-grammar-builder": "^0.6.0",
-    "nyc": "^15.1.0",
+    "nyc": "^18.0.0",
     "xo": "^0.56.0"
   },
   "dependencies": {
