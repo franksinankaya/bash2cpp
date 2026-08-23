@@ -26,10 +26,14 @@
     "clean": "tsc --build --clean",
     "test": "python3 test.py"
   },
+  "overrides": {
+    "nomnom": {
+      "underscore": "1.13.8"
+    }
+  },
   "devDependencies": {
     "@types/node": "^15.3.0",
     "ava": "^5.1.0",
-    "coveralls": "^3.1.0",
     "json5": "^2.2.3",
     "mode-grammar-builder": "^0.6.0",
     "nyc": "^18.0.0",
